@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rating — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:1000px;margin:0 auto;padding:4px 16px 40px}
+  #scarce-ratings-app{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:24px;margin-top:16px}
+  #scarce-ratings-app *{box-sizing:border-box}
+  .backLink{display:inline-block;color:var(--grey);font-size:13px;text-decoration:none;margin:20px 0 0}
+  .backLink:hover{color:var(--teal-deep)}
+  .rHead{margin-top:4px}
+  .rName{font-size:27px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .rBand{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.05em;color:#fff;padding:5px 15px;border-radius:20px}
+  .rMeta{color:var(--grey);font-size:13px;margin-top:4px}
+  .rTop{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center;margin-top:18px}
+  @media(max-width:600px){.rTop{grid-template-columns:1fr}}
+  .rRadarWrap{position:relative}
+  .rRadar{width:100%;height:auto;display:block}
+  .rScoreLbl{font-size:11px;letter-spacing:.1em;color:var(--grey);font-weight:700}
+  .rScoreVal{font-size:54px;font-weight:800;color:var(--navy);line-height:1}
+  .rScoreVal small{font-size:20px;color:var(--grey);font-weight:600}
+  .rBandRow{margin-top:8px}
+  .rSummary{font-size:15px;color:var(--ink);line-height:1.55;margin:14px 0 0}
+  .rOverride{margin-top:10px;font-size:12px;color:#8C2F22;font-weight:600}
+  .rDivide{display:flex;align-items:center;gap:12px;margin:26px 0 4px;color:var(--gold);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .rDivide:before,.rDivide:after{content:"";flex:1;height:2px;background:var(--gold);opacity:.35}
+  .rCat{padding:13px 0;border-bottom:1px solid var(--line)}
+  .rCat:last-child{border-bottom:0}
+  .rCatHead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .rCatName{font-weight:800;font-size:15px;color:var(--navy)}
+  .rCatScore{font-weight:800;font-size:14px;color:var(--teal-deep);white-space:nowrap}
+  .rCatWhy{font-size:14px;color:var(--ink);line-height:1.6;margin-top:5px}
+  .rBar{height:5px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
+  .rBarFill{height:100%;border-radius:3px;transition:width .4s ease}
+  .rGate{margin-top:20px;background:var(--navy);border-radius:12px;padding:20px 24px;color:#fff;text-align:center}
+  .rGate h3{font-size:16px;font-weight:800;margin-bottom:6px}
+  .rGate p{font-size:13px;color:#C9CDD2;margin-bottom:12px}
+  .rGate a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:10px 20px;border-radius:8px}
+  .loading, .err{color:var(--grey);text-align:center;padding:40px}
+  .err{color:#C0392B}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <a class="backLink" href="ratings.html">← Back to all ratings</a>
+    <div id="scarce-ratings-app"><p class="loading">Loading rating…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+
+  var hexA = function(h, a){ var n = parseInt(h.slice(1), 16); return "rgba(" + (n>>16&255) + "," + (n>>8&255) + "," + (n&255) + "," + a + ")"; };
+
+  // Draws the big radar WITH axis labels — this is the fix for the
+  // original bug: category names now render around the chart instead
+  // of just the bare shape.
+  function bigRadar(cv, categories, order, col, finalScore){
+    var ctx = cv.getContext("2d");
+    var Wd = cv.width, Hd = cv.height, cx = Wd/2, cy = Hd/2 + 10, R = Wd*0.30, N = order.length, step = Math.PI*2/N;
+    function ang(i){ return -Math.PI/2 + i*step; }
+
+    ctx.fillStyle = "#14181C"; ctx.fillRect(0, 0, Wd, Hd);
+
+    for(var ring=1; ring<=5; ring++){
+      ctx.beginPath();
+      for(var i=0; i<N; i++){ var a=ang(i), rr=R*ring/5, x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.closePath();
+      ctx.strokeStyle = ring===5 ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.10)";
+      ctx.lineWidth = ring===5 ? 2 : 1; ctx.stroke();
+    }
+    for(var s=0; s<N; s++){
+      var a2 = ang(s);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+Math.cos(a2)*R, cy+Math.sin(a2)*R);
+      ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.stroke();
+    }
+
+    ctx.beginPath();
+    order.forEach(function(c, i){
+      var sc = (categories[c] && categories[c].score) || 0, a = ang(i), rr = R*sc/5, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    });
+    ctx.closePath(); ctx.fillStyle = hexA(col, .30); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.stroke();
+
+    order.forEach(function(c, i){
+      var sc = (categories[c] && categories[c].score) || 0, a = ang(i), rr = R*sc/5, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = "#14181C"; ctx.lineWidth = 3; ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
+    });
+
+    // ---- Axis labels (the actual fix) — category name near each spoke's end ----
+    ctx.font = "600 15px -apple-system,Helvetica,Arial,sans-serif";
+    ctx.fillStyle = "#C9CDD2";
+    order.forEach(function(c, i){
+      var a = ang(i);
+      var labelR = R + 22;
+      var x = cx + Math.cos(a) * labelR;
+      var y = cy + Math.sin(a) * labelR;
+      // Wrap long category names onto two lines so they don't overlap neighbors
+      var words = c.split(" ");
+      var lines = [];
+      var line = "";
+      words.forEach(function(w){
+        var test = line ? line + " " + w : w;
+        if(test.length > 12 && line){ lines.push(line); line = w; } else { line = test; }
+      });
+      if(line) lines.push(line);
+
+      ctx.textAlign = Math.cos(a) > 0.3 ? "left" : Math.cos(a) < -0.3 ? "right" : "center";
+      ctx.textBaseline = "middle";
+      lines.forEach(function(ln, li){
+        ctx.fillText(ln, x, y + (li - (lines.length - 1) / 2) * 15);
+      });
+    });
+
+    ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI*2);
+    ctx.fillStyle = "#14181C"; ctx.fill();
+    ctx.strokeStyle = hexA(col, .65); ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff"; ctx.font = "800 62px -apple-system,Helvetica,Arial,sans-serif";
+    ctx.fillText(finalScore.toFixed(1), cx, cy - 8);
+    ctx.fillStyle = "#8B9299"; ctx.font = "600 20px -apple-system,Helvetica,Arial,sans-serif";
+    ctx.fillText("/ 100", cx, cy + 30);
+  }
+
+  function render(d){
+    var app = document.getElementById("scarce-ratings-app");
+    var isPaid = d.tier === "paid";
+    var html = '<div class="rHead"><div class="rName">' + d.name +
+      '<span class="rBand" style="background:' + d.bandColor + '">' + d.band + '</span></div>' +
+      '<div class="rMeta">' + (d.city || "") + (d.developer ? " · " + d.developer : "") + '</div></div>' +
+      '<div class="rTop"><div class="rRadarWrap"><canvas class="rRadar" id="rRadarCv" width="1080" height="1080"></canvas></div>' +
+      '<div><div class="rScoreLbl">SCARCE SCORE</div><div class="rScoreVal">' + d.score.toFixed(1) + '<small>/ 100</small></div>' +
+      '<div class="rBandRow"><span class="rBand" style="background:' + d.bandColor + '">' + d.band + '</span></div>' +
+      (isPaid && d.summary ? '<p class="rSummary">' + d.summary + '</p>' : '') +
+      (d.scarcityOverrideApplied ? '<div class="rOverride">Scarcity override applied — capped at 49.</div>' : '') +
+      '</div></div>';
+
+    if(isPaid){
+      html += '<div class="rDivide"><span>The reasoning — how it scored, and why</span></div><div class="rReasoning">';
+      d.categoryOrder.forEach(function(c){
+        var cat = d.categories[c];
+        if(!cat) return;
+        var sc = cat.score;
+        var bc = sc>=4?"#0B7A76":sc>=3?"#35A8A3":sc>=2?"#C9952B":sc>=1?"#D9772F":"#C0392B";
+        html += '<div class="rCat"><div class="rCatHead"><span class="rCatName">' + c + '</span><span class="rCatScore">' + sc.toFixed(1) + ' / 5</span></div>' +
+          '<div class="rBar"><div class="rBarFill" style="width:' + (sc/5*100) + '%;background:' + bc + '"></div></div>' +
+          '<p class="rCatWhy">' + (cat.why || "") + '</p></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="rGate"><h3>See the full reasoning behind this score</h3>' +
+        '<p>Sign in to unlock the category-by-category breakdown and why each score landed where it did.</p>' +
+        '<a href="auth.html?mode=signup">Sign up free</a></div>';
+    }
+
+    app.innerHTML = html;
+    bigRadar(document.getElementById("rRadarCv"), d.categories, d.categoryOrder, d.bandColor, d.score);
+  }
+
+  async function load(){
+    var slug = new URLSearchParams(window.location.search).get("slug");
+    if(!slug){
+      document.getElementById("scarce-ratings-app").innerHTML = '<p class="err">No community specified.</p>';
+      return;
+    }
+
+    var session = (await sb.auth.getSession()).data.session;
+    var headers = { "Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY };
+    headers["Authorization"] = "Bearer " + (session ? session.access_token : SUPABASE_PUBLISHABLE_KEY);
+
+    try {
+      var res = await fetch(FUNCTIONS_URL + "/get-rating", {
+        method: "POST", headers: headers, body: JSON.stringify({ slug: slug })
+      });
+      var d = await res.json();
+      if(d.error){ throw new Error(d.error); }
+      render(d);
+    } catch(e){
+      document.getElementById("scarce-ratings-app").innerHTML = '<p class="err">Unable to load this rating. (' + e.message + ')</p>';
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

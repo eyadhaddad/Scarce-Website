@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratings — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:1180px;margin:0 auto;padding:4px 16px 40px}
+  .libHead{max-width:620px;margin:20px 0 24px}
+  .libHead h1{font-size:30px;font-weight:800;color:var(--navy)}
+  .libHead p{color:var(--ink);font-size:14.5px;line-height:1.55;margin:6px 0 0}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:460px){.grid{grid-template-columns:1fr}}
+  .rcard{display:block;background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;text-decoration:none}
+  .rcTop{background:var(--navy);display:flex;align-items:center;justify-content:center;padding:8px}
+  .rcRadar{width:100%;height:auto;display:block;max-width:230px}
+  .rcTxt{padding:13px 15px 15px}
+  .rcName{font-weight:800;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .rcBand{font-size:10px;font-weight:800;letter-spacing:.04em;color:#fff;padding:2px 8px;border-radius:12px}
+  .rcMeta{font-size:12px;color:var(--grey);margin-top:2px}
+  .rcScore{font-size:26px;font-weight:800;color:var(--navy);margin-top:8px}
+  .rcScore span{font-size:13px;color:var(--grey);font-weight:600}
+  .loading{color:var(--grey);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div class="libHead">
+      <h1>Ratings</h1>
+      <p>Every UAE community scored on the Scarce framework. The shape and score are free — sign in for the full reasoning behind each category.</p>
+    </div>
+    <div class="grid" id="grid"><p class="loading">Loading ratings…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+
+  var hexA = function(h, a){ var n = parseInt(h.slice(1), 16); return "rgba(" + (n>>16&255) + "," + (n>>8&255) + "," + (n&255) + "," + a + ")"; };
+
+  function miniRadar(cv, radarScores, order, col){
+    var ctx = cv.getContext("2d"), Wd = cv.width, Hd = cv.height, cx = Wd/2, cy = Hd/2, R = Wd*0.36, N = order.length, step = Math.PI*2/N;
+    function ang(i){ return -Math.PI/2 + i*step; }
+    ctx.clearRect(0, 0, Wd, Hd);
+    for(var ring=1; ring<=5; ring++){
+      ctx.beginPath();
+      for(var i=0; i<N; i++){ var a=ang(i), rr=R*ring/5, x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.closePath();
+      ctx.strokeStyle = ring===5 ? "rgba(255,255,255,.25)" : "rgba(255,255,255,.09)";
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.beginPath();
+    order.forEach(function(c, j){
+      var sc = radarScores[c] || 0, a = ang(j), rr = R*sc/5, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      j ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    });
+    ctx.closePath(); ctx.fillStyle = hexA(col, .32); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke();
+    order.forEach(function(c, k){
+      var sc = radarScores[c] || 0, a = ang(k), rr = R*sc/5, x = cx+Math.cos(a)*rr, y = cy+Math.sin(a)*rr;
+      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2);
+      ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = "#14181C"; ctx.lineWidth = 1.5; ctx.stroke();
+    });
+  }
+
+  fetch(FUNCTIONS_URL + "/list-ratings", {
+    headers: { "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY, "apikey": SUPABASE_PUBLISHABLE_KEY }
+  }).then(function(res){ return res.json(); }).then(function(data){
+    var grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    data.ratings.forEach(function(r){
+      var a = document.createElement("a");
+      a.className = "rcard"; a.href = "ratings-detail.html?slug=" + r.slug;
+      a.innerHTML =
+        '<div class="rcTop"><canvas class="rcRadar" width="300" height="300"></canvas></div>' +
+        '<div class="rcTxt"><div class="rcName">' + r.name + '<span class="rcBand" style="background:' + r.bandColor + '">' + r.band + '</span></div>' +
+        '<div class="rcMeta">' + (r.city || "") + (r.developer ? " · " + r.developer : "") + '</div>' +
+        '<div class="rcScore">' + r.score.toFixed(1) + '<span>/100</span></div></div>';
+      grid.appendChild(a);
+      miniRadar(a.querySelector(".rcRadar"), r.radarScores, data.categoryOrder, r.bandColor);
+    });
+  }).catch(function(e){
+    document.getElementById("grid").innerHTML = '<p style="color:#C0392B">Unable to load ratings. (' + e.message + ')</p>';
+  });
+})();
+</script>
+</body>
+</html>

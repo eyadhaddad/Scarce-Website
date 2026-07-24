@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — Scarce</title>
+<style>
+  :root{--navy:#14181C;--ink:#2A2F35;--teal:#0E9B96;--teal-deep:#0B7A76;
+    --gold:#C9952B;--red:#C0392B;--cream:#FAF8F4;--line:#ECE9E3;--grey:#7A7F87;--white:#fff;--mid:#F4F1EB}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--cream);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:400px}
+  .brand{text-align:center;margin-bottom:28px}
+  .brand h1{font-size:32px;font-weight:800;letter-spacing:.06em;color:var(--navy)}
+  .brand .tag{color:var(--teal);font-weight:700;font-style:italic;font-size:14px;margin-top:4px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 28px;box-shadow:0 20px 40px rgba(20,24,28,.06)}
+  .tabs{display:flex;background:var(--mid);border-radius:10px;padding:4px;margin-bottom:24px}
+  .tab{flex:1;text-align:center;padding:9px;border-radius:7px;font-weight:700;font-size:13.5px;color:var(--grey);cursor:pointer;transition:all .15s}
+  .tab.on{background:#fff;color:var(--navy);box-shadow:0 2px 6px rgba(20,24,28,.08)}
+  h2{font-size:19px;font-weight:800;color:var(--navy);margin-bottom:6px}
+  .sub{color:var(--grey);font-size:13px;margin-bottom:20px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .fld input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;
+    background:var(--cream);color:var(--navy)}
+  .fld input:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+  .submitBtn{width:100%;background:var(--teal);color:#fff;border:none;font:inherit;font-weight:700;font-size:14.5px;
+    padding:12px;border-radius:9px;cursor:pointer;margin-top:6px;transition:background .15s}
+  .submitBtn:hover{background:var(--teal-deep)}
+  .submitBtn:disabled{background:var(--grey);cursor:not-allowed}
+  .msg{margin-top:14px;font-size:13px;padding:10px 12px;border-radius:8px;display:none}
+  .msg.err{background:#FCF0EE;color:var(--red);display:block}
+  .msg.ok{background:#EAF6F5;color:var(--teal-deep);display:block}
+  .foot{text-align:center;color:var(--grey);font-size:11.5px;margin-top:22px;line-height:1.5}
+  .foot a{color:var(--teal-deep);font-weight:600;text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <h1>SCARCE</h1>
+      <div class="tag">UAE property, decoded.</div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab on" id="tabSignin">Sign in</div>
+        <div class="tab" id="tabSignup">Create account</div>
+      </div>
+
+      <div id="signinPanel">
+        <h2>Welcome back</h2>
+        <div class="sub">Sign in to your account</div>
+        <div class="fld"><label>Email</label><input type="email" id="siEmail" autocomplete="email"></div>
+        <div class="fld"><label>Password</label><input type="password" id="siPassword" autocomplete="current-password"></div>
+        <button class="submitBtn" id="siSubmit">Sign in</button>
+        <div class="msg" id="siMsg"></div>
+      </div>
+
+      <div id="signupPanel" style="display:none">
+        <h2>Create your account</h2>
+        <div class="sub">Create a free account to enjoy a large selection of essential tools</div>
+        <div class="fld"><label>Name</label><input type="text" id="suName" autocomplete="name"></div>
+        <div class="fld"><label>Email</label><input type="email" id="suEmail" autocomplete="email"></div>
+        <div class="fld"><label>Password</label><input type="password" id="suPassword" autocomplete="new-password"></div>
+        <button class="submitBtn" id="suSubmit">Create account</button>
+        <div class="msg" id="suMsg"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Educational only. Not financial, legal or investment advice.<br>
+      © Scarce · scarce.ae
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+  // Publishable key — safe to expose in browser code, RLS does the
+  // actual protecting, not secrecy of this key.
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb; // other pages (mortgage calc, portfolio tracker, etc.) reuse this global
+
+  // Where to send someone after a successful sign in / sign up.
+  // Update this once the mortgage calculator page exists.
+  var REDIRECT_TO = "mortgage-calculator.html";
+
+  function $(id){ return document.getElementById(id); }
+
+  // If already logged in, skip straight past this page.
+  sb.auth.getSession().then(function(res){
+    if(res.data.session){ window.location.href = REDIRECT_TO; }
+  });
+
+  $("tabSignin").addEventListener("click", function(){
+    $("tabSignin").classList.add("on"); $("tabSignup").classList.remove("on");
+    $("signinPanel").style.display = "block"; $("signupPanel").style.display = "none";
+  });
+  $("tabSignup").addEventListener("click", function(){
+    $("tabSignup").classList.add("on"); $("tabSignin").classList.remove("on");
+    $("signupPanel").style.display = "block"; $("signinPanel").style.display = "none";
+  });
+
+  function showMsg(el, text, ok){
+    el.textContent = text;
+    el.className = "msg " + (ok ? "ok" : "err");
+  }
+
+  $("siSubmit").addEventListener("click", async function(){
+    var email = $("siEmail").value.trim();
+    var password = $("siPassword").value;
+    var msg = $("siMsg");
+    if(!email || !password){ showMsg(msg, "Enter your email and password.", false); return; }
+
+    $("siSubmit").disabled = true; $("siSubmit").textContent = "Signing in…";
+    var res = await sb.auth.signInWithPassword({ email: email, password: password });
+    $("siSubmit").disabled = false; $("siSubmit").textContent = "Sign in";
+
+    if(res.error){
+      showMsg(msg, res.error.message, false);
+    } else {
+      showMsg(msg, "Signed in — redirecting…", true);
+      window.location.href = REDIRECT_TO;
+    }
+  });
+
+  $("suSubmit").addEventListener("click", async function(){
+    var name = $("suName").value.trim();
+    var email = $("suEmail").value.trim();
+    var password = $("suPassword").value;
+    var msg = $("suMsg");
+
+    if(!name){ showMsg(msg, "Enter your name.", false); return; }
+    if(!email || !password){ showMsg(msg, "Enter your email and password.", false); return; }
+    if(password.length < 6){ showMsg(msg, "Password must be at least 6 characters.", false); return; }
+
+    $("suSubmit").disabled = true; $("suSubmit").textContent = "Creating account…";
+    var res = await sb.auth.signUp({ email: email, password: password });
+    $("suSubmit").disabled = false; $("suSubmit").textContent = "Create account";
+
+    if(res.error){
+      showMsg(msg, res.error.message, false);
+      return;
+    }
+
+    // The profiles row is auto-created by the on_auth_user_created
+    // trigger — we just need to save the name they entered.
+    if(res.data.user){
+      await sb.from("profiles").update({ name: name }).eq("id", res.data.user.id);
+    }
+
+    if(res.data.session){
+      showMsg(msg, "Account created — redirecting…", true);
+      window.location.href = REDIRECT_TO;
+    } else {
+      // Email confirmation is required (depends on your Supabase auth settings)
+      showMsg(msg, "Account created — check your email to confirm before signing in.", true);
+    }
+  });
+
+  // Allow Enter key to submit either form
+  $("siPassword").addEventListener("keydown", function(e){ if(e.key === "Enter") $("siSubmit").click(); });
+  $("suPassword").addEventListener("keydown", function(e){ if(e.key === "Enter") $("suSubmit").click(); });
+})();
+</script>
+</body>
+</html>

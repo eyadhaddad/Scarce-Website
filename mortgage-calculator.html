@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mortgage Calculator — Scarce</title>
+<style>
+  :root{--navy:#14181C;--ink:#2A2F35;--teal:#0E9B96;--teal-deep:#0B7A76;--teal-lt:#35A8A3;
+    --gold:#C9952B;--orange:#D9772F;--red:#C0392B;--green:#1F7A4D;--cream:#FAF8F4;
+    --line:#ECE9E3;--grey:#7A7F87;--white:#fff;--mid:#F4F1EB}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--cream);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  .topbar{display:flex;justify-content:space-between;align-items:center;max-width:1180px;margin:0 auto;padding:20px 16px}
+  .topbar .logo{font-size:18px;font-weight:800;letter-spacing:.06em;color:var(--navy);text-decoration:none}
+  .topbar .signin{color:var(--teal);font-weight:700;font-size:13.5px;text-decoration:none;border:1.5px solid var(--teal);
+    padding:8px 16px;border-radius:8px;transition:all .15s}
+  .topbar .signin:hover{background:var(--teal);color:#fff}
+  #scarce-mortgage{max-width:1180px;margin:0 auto;padding:4px 16px 40px}
+  #scarce-mortgage *{box-sizing:border-box}
+  #scarce-mortgage .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:0 0 14px}
+  #scarce-mortgage .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+  #scarce-mortgage .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media(max-width:620px){#scarce-mortgage .grid{grid-template-columns:1fr}}
+  #scarce-mortgage .card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  #scarce-mortgage .card h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:12px}
+  #scarce-mortgage .field{margin-bottom:11px}
+  #scarce-mortgage .field label{display:flex;justify-content:space-between;font-size:12px;color:var(--grey);font-weight:600;margin-bottom:5px}
+  #scarce-mortgage .field label b{color:var(--navy);font-weight:800}
+  #scarce-mortgage input[type=number]{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--cream);color:var(--navy);font-weight:600}
+  #scarce-mortgage input:focus{outline:2px solid var(--teal);outline-offset:1px}
+  #scarce-mortgage input[type=range]{width:100%;accent-color:var(--teal);margin-top:2px}
+  #scarce-mortgage select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--cream);color:var(--navy);font-weight:600}
+  #scarce-mortgage .prefix{position:relative}
+  #scarce-mortgage .prefix span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--grey);font-size:12px;font-weight:600;pointer-events:none}
+  #scarce-mortgage .prefix input{padding-left:42px}
+  #scarce-mortgage .insideCol{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-top:2px}
+  @media(max-width:620px){#scarce-mortgage .insideCol{grid-template-columns:1fr}}
+  #scarce-mortgage .payment{text-align:center;padding:4px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  #scarce-mortgage .payment .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600}
+  #scarce-mortgage .payment .val{font-size:34px;font-weight:800;color:var(--navy);line-height:1.05;margin-top:2px}
+  #scarce-mortgage .payment .val small{font-size:15px;color:var(--grey);font-weight:600}
+  #scarce-mortgage .line{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--line)}
+  #scarce-mortgage .line:last-child{border-bottom:0}
+  #scarce-mortgage .line .k{color:var(--grey)}
+  #scarce-mortgage .line .v{font-weight:700;color:var(--navy)}
+  #scarce-mortgage .insight{margin-top:0;margin-bottom:8px;padding:12px 14px;border-radius:9px;font-size:12.5px;line-height:1.5;border-left:3px solid var(--teal);background:var(--mid)}
+  #scarce-mortgage .insight.warn{border-left-color:var(--orange);background:#FDF3EA}
+  #scarce-mortgage .insight.bad{border-left-color:var(--red);background:#FCF0EE}
+  #scarce-mortgage .insight b{color:var(--navy)}
+  #scarce-mortgage .insightWrap{margin-top:4px}
+  #scarce-mortgage .ltv{margin-top:14px;padding:12px 14px;border-radius:9px;background:var(--navy);color:#fff}
+  #scarce-mortgage .ltv .row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+  #scarce-mortgage .ltv .row .v{font-weight:700}
+  #scarce-mortgage .ltvBar{height:8px;background:rgba(255,255,255,.15);border-radius:4px;margin:8px 0 6px;overflow:hidden}
+  #scarce-mortgage .ltvFill{height:100%;background:var(--teal);border-radius:4px}
+  #scarce-mortgage .ltvFill.over{background:var(--red)}
+  #scarce-mortgage .ltvNote{font-size:11px;color:#B9BDC2}
+  #scarce-mortgage .cta{margin-top:0;background:var(--navy);border-radius:12px;padding:18px 20px;color:#fff}
+  #scarce-mortgage .cta h3{font-size:15px;font-weight:800;margin-bottom:4px}
+  #scarce-mortgage .cta p{font-size:12.5px;color:#C9CDD2;line-height:1.5}
+  #scarce-mortgage .cta a{display:inline-block;margin-top:10px;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px}
+  #scarce-mortgage .disc{font-size:11px;color:var(--grey);font-style:italic;margin-top:2px;line-height:1.4;grid-column:1 / -1}
+  #scarce-mortgage .loading{color:var(--grey);font-size:12px;font-style:italic}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+<div id="scarce-mortgage">
+<div class="wrap">
+  <div class="toolTitle">SCARCE <span>Mortgage Calculator</span></div>
+  <div class="grid">
+    <div class="card">
+      <h2>Your numbers</h2>
+      <div class="field">
+        <label>Property price <b id="priceLbl">AED 1,500,000</b></label>
+        <div class="prefix"><span>AED</span><input type="number" id="price" value="1500000"></div>
+      </div>
+      <div class="field">
+        <label>Down payment <b id="dpLbl">20% · AED 300,000</b></label>
+        <input type="range" id="dpPct" min="15" max="100" step="1" value="20">
+      </div>
+      <div class="field">
+        <label>Interest rate (EIBOR-linked) <b id="rateLbl">4.5%</b></label>
+        <input type="range" id="rate" min="2" max="8" step="0.1" value="4.5">
+      </div>
+      <div class="field">
+        <label>Term <b id="termLbl">25 years</b></label>
+        <input type="range" id="term" min="5" max="25" step="1" value="25">
+      </div>
+      <div class="field">
+        <label>Buyer type</label>
+        <select id="buyer">
+          <option value="expat1">Expat · first home</option>
+          <option value="expat2">Expat · second / investment</option>
+          <option value="national1">UAE national · first home</option>
+          <option value="offplan">Off-plan</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card out">
+      <div class="payment">
+        <div class="lbl">Monthly payment</div>
+        <div class="val" id="monthly">—</div>
+      </div>
+      <div class="line"><span class="k">Loan amount</span><span class="v" id="loan">—</span></div>
+      <div class="line"><span class="k">Down payment</span><span class="v" id="down">—</span></div>
+      <div class="line"><span class="k">Total interest paid</span><span class="v" id="interest">—</span></div>
+      <div class="line"><span class="k">Total repaid</span><span class="v" id="total">—</span></div>
+
+      <div class="ltv" id="ltvBox">
+        <div class="row"><span>Your loan-to-value</span><span class="v" id="ltvVal">80%</span></div>
+        <div class="ltvBar"><div class="ltvFill" id="ltvFill"></div></div>
+        <div class="ltvNote" id="ltvNote"></div>
+      </div>
+    </div>
+
+    <div class="insideCol">
+      <div class="insightWrap" id="insights"><p class="loading">Calculating…</p></div>
+      <div class="cta">
+        <h3>The payment is the easy part.</h3>
+        <p>What decides this buy isn't the mortgage — it's whether the property holds and grows its value. That comes down to scarcity.</p>
+        <a href="ratings.html">Screen this property →</a>
+      </div>
+      <div class="disc">Estimate only. Actual rates, fees and eligibility are set by your bank and the CBUAE. Not financial advice.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var AED = function(n){ return "AED " + Math.round(n).toLocaleString("en-AE"); };
+  var AEDk = function(n){ return n >= 1e6 ? "AED " + (n/1e6).toFixed(2) + "M" : "AED " + Math.round(n).toLocaleString("en-AE"); };
+
+  var debounceTimer = null;
+
+  async function calc(){
+    var price = +$("price").value || 0;
+    var dpPct = +$("dpPct").value;
+    var rate = +$("rate").value;
+    var term = +$("term").value;
+    var buyer = $("buyer").value;
+    var down = price * dpPct / 100;
+
+    $("priceLbl").textContent = AED(price);
+    $("dpLbl").textContent = dpPct + "% · " + AED(down);
+    $("rateLbl").textContent = rate.toFixed(1) + "%";
+    $("termLbl").textContent = term + " years";
+
+    $("insights").innerHTML = '<p class="loading">Calculating…</p>';
+
+    try {
+      var res = await fetch(FUNCTIONS_URL + "/calculate-mortgage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY,
+          "apikey": SUPABASE_PUBLISHABLE_KEY
+        },
+        body: JSON.stringify({ price: price, dpPct: dpPct, rate: rate, term: term, buyer: buyer })
+      });
+      var d = await res.json();
+      if(d.error){ throw new Error(d.error); }
+
+      $("monthly").innerHTML = AED(d.monthly) + ' <small>/mo</small>';
+      $("loan").textContent = AED(d.loan);
+      $("down").textContent = AED(d.down);
+      $("interest").textContent = AED(d.totalInterest);
+      $("total").textContent = AED(d.totalRepaid);
+
+      $("ltvVal").textContent = d.ltv + "%";
+      var fill = $("ltvFill");
+      fill.style.width = Math.min(d.ltv, 100) + "%";
+      fill.classList.toggle("over", d.overCap);
+      $("ltvNote").textContent = d.overCap
+        ? "Over the " + d.ltvCap + "% cap for this buyer type — a bank won't lend this much. Raise your down payment."
+        : "Within the " + d.ltvCap + "% CBUAE cap for this buyer type.";
+
+      var ins = $("insights"); ins.innerHTML = "";
+      function add(cls, html){ var el = document.createElement("div"); el.className = "insight " + cls; el.innerHTML = html; ins.appendChild(el); }
+
+      if(d.interestAsPctOfLoan >= 60){
+        add("warn", "<b>Interest is " + Math.round(d.interestAsPctOfLoan) + "% of what you borrow.</b> Over " + term + " years you repay " + AEDk(d.totalRepaid) + " on a " + AEDk(d.loan) + " loan. A shorter term cuts this sharply — worth modelling.");
+      } else {
+        add("", "<b>Interest is " + Math.round(d.interestAsPctOfLoan) + "% of the loan</b> over the full term. Shortening the term or overpaying early reduces it significantly.");
+      }
+
+      if(d.overCap){
+        add("bad", "<b>This down payment is too low to finance.</b> At " + dpPct + "% down your LTV is " + d.ltv + "%, above the " + d.ltvCap + "% cap. You'll need at least " + AED(d.requiredDownIfOver) + " down.");
+      } else {
+        add("", "<b>You'd pay about " + AEDk(d.annualPayment) + " a year</b> servicing this loan. If you rent it out, that's the number your rent has to beat before the property earns you anything.");
+      }
+    } catch(e){
+      $("insights").innerHTML = '<p style="color:#C0392B">Could not calculate — please try again. (' + e.message + ')</p>';
+      console.error(e);
+    }
+  }
+
+  function debouncedCalc(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(calc, 250);
+  }
+
+  ["price","dpPct","rate","term","buyer"].forEach(function(id){
+    $(id).addEventListener("input", debouncedCalc);
+  });
+
+  calc();
+})();
+</script>
+</body>
+</html>

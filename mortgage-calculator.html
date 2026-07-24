@@ -10,11 +10,23 @@
   #scarce-mortgage *{box-sizing:border-box}
   #scarce-mortgage .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:0 0 14px}
   #scarce-mortgage .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
-  #scarce-mortgage .grid{display:grid;grid-template-columns:1fr 1.15fr;gap:14px;align-items:start}
-  @media(max-width:620px){#scarce-mortgage .grid{grid-template-columns:1fr}}
+
+  /* Inputs: full-width card at top, fields arranged in a row so the
+     extra width is actually used instead of a sparse stacked column */
+  #scarce-mortgage .inputsCard{margin-bottom:14px}
+  #scarce-mortgage .fieldsRow{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;margin-top:14px}
+  @media(max-width:640px){#scarce-mortgage .fieldsRow{grid-template-columns:1fr}}
+  #scarce-mortgage .fieldsLeft{display:flex;flex-direction:column;gap:16px}
+  #scarce-mortgage .fieldsRight{display:flex;flex-direction:column;gap:14px}
+
+  /* Below the inputs: results (left) | comments (right) */
+  #scarce-mortgage .resultsGrid{display:grid;grid-template-columns:1fr 1.1fr;gap:14px;align-items:start}
+  @media(max-width:760px){#scarce-mortgage .resultsGrid{grid-template-columns:1fr}}
+  #scarce-mortgage .commentsCol{display:flex;flex-direction:column;gap:12px}
+
   #scarce-mortgage .card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
   #scarce-mortgage .card h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:800;margin:0}
-  #scarce-mortgage .field{margin-bottom:11px}
+  #scarce-mortgage .field{margin-bottom:0}
   #scarce-mortgage .field label{display:flex;justify-content:space-between;font-size:12px;color:var(--grey);font-weight:600;margin-bottom:5px}
   #scarce-mortgage .field label b{color:var(--navy);font-weight:800}
   #scarce-mortgage input[type=number]{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--cream);color:var(--navy);font-weight:600}
@@ -24,9 +36,7 @@
   #scarce-mortgage .prefix{position:relative}
   #scarce-mortgage .prefix span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--grey);font-size:12px;font-weight:600;pointer-events:none}
   #scarce-mortgage .prefix input{padding-left:42px}
-  #scarce-mortgage .collapsible-body{margin-top:14px}
-  #scarce-mortgage .insideCol{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-top:2px}
-  @media(max-width:620px){#scarce-mortgage .insideCol{grid-template-columns:1fr}}
+  #scarce-mortgage .collapsible-body{margin-top:0}
 
   /* Stronger hierarchy: the monthly payment is THE number that matters
      on this page — everything else recedes around it. */
@@ -56,7 +66,7 @@
   #scarce-mortgage .cta p{font-size:12.5px;color:#C9CDD2;line-height:1.5}
   #scarce-mortgage .cta a{display:inline-block;margin-top:10px;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;transition:background .15s}
   #scarce-mortgage .cta a:hover{background:var(--teal-deep)}
-  #scarce-mortgage .disc{font-size:11px;color:var(--grey);font-style:italic;margin-top:2px;line-height:1.4;grid-column:1 / -1}
+  #scarce-mortgage .disc{font-size:11px;color:var(--grey);font-style:italic;margin-top:14px;line-height:1.4}
   #scarce-mortgage .loading{color:var(--grey);font-size:12px;font-style:italic}
 </style>
 </head>
@@ -69,41 +79,48 @@
 <div id="scarce-mortgage">
 <div class="wrap">
   <div class="toolTitle">SCARCE <span>Mortgage Calculator</span></div>
-  <div class="grid">
-    <div class="card">
-      <div class="collapsible-head" id="inputsHead">
-        <h2>Your numbers</h2>
-        <span class="chevron">▾</span>
-      </div>
-      <div class="collapsible-body" id="inputsBody">
-        <div class="field" style="margin-top:14px">
-          <label>Property price <b id="priceLbl">AED 1,500,000</b></label>
-          <div class="prefix"><span>AED</span><input type="number" id="price" value="1500000"></div>
+
+  <div class="card inputsCard">
+    <div class="collapsible-head" id="inputsHead">
+      <h2>Your numbers</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="collapsible-body" id="inputsBody">
+      <div class="fieldsRow">
+        <div class="fieldsLeft">
+          <div class="field">
+            <label>Property price <b id="priceLbl">AED 1,500,000</b></label>
+            <div class="prefix"><span>AED</span><input type="number" id="price" value="1500000"></div>
+          </div>
+          <div class="field">
+            <label>Buyer type</label>
+            <select id="buyer">
+              <option value="expat1">Expat · first home</option>
+              <option value="expat2">Expat · second / investment</option>
+              <option value="national1">UAE national · first home</option>
+              <option value="offplan">Off-plan</option>
+            </select>
+          </div>
         </div>
-        <div class="field">
-          <label>Down payment <b id="dpLbl">20% · AED 300,000</b></label>
-          <input type="range" id="dpPct" min="15" max="100" step="1" value="20">
-        </div>
-        <div class="field">
-          <label>Interest rate (EIBOR-linked) <b id="rateLbl">4.5%</b></label>
-          <input type="range" id="rate" min="2" max="8" step="0.1" value="4.5">
-        </div>
-        <div class="field">
-          <label>Term <b id="termLbl">25 years</b></label>
-          <input type="range" id="term" min="5" max="25" step="1" value="25">
-        </div>
-        <div class="field">
-          <label>Buyer type</label>
-          <select id="buyer">
-            <option value="expat1">Expat · first home</option>
-            <option value="expat2">Expat · second / investment</option>
-            <option value="national1">UAE national · first home</option>
-            <option value="offplan">Off-plan</option>
-          </select>
+        <div class="fieldsRight">
+          <div class="field">
+            <label>Down payment <b id="dpLbl">20% · AED 300,000</b></label>
+            <input type="range" id="dpPct" min="15" max="100" step="1" value="20">
+          </div>
+          <div class="field">
+            <label>Interest rate <b id="rateLbl">4.5%</b></label>
+            <input type="range" id="rate" min="2" max="8" step="0.1" value="4.5">
+          </div>
+          <div class="field">
+            <label>Term <b id="termLbl">25 years</b></label>
+            <input type="range" id="term" min="5" max="25" step="1" value="25">
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
+  <div class="resultsGrid">
     <div class="card out">
       <div class="payment">
         <div class="lbl">Monthly payment</div>
@@ -121,17 +138,18 @@
       </div>
     </div>
 
-    <div class="insideCol">
+    <div class="commentsCol">
       <div class="insightWrap" id="insights"><p class="loading">Calculating…</p></div>
       <div class="cta">
         <h3>The payment is the easy part.</h3>
         <p>What decides this buy isn't the mortgage — it's whether the property holds and grows its value. That comes down to scarcity.</p>
         <a href="ratings.html">Screen this property →</a>
       </div>
-      <div class="disc">Estimate only. Actual rates, fees and eligibility are set by your bank and the CBUAE. Not financial advice.</div>
     </div>
   </div>
-</div>
+
+  <div class="disc">Estimate only. Actual rates, fees and eligibility are set by your bank and the CBUAE. Not financial advice.</div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>

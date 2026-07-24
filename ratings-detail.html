@@ -143,37 +143,42 @@
 
   function render(d){
     var app = document.getElementById("scarce-ratings-app");
-    var isPaid = d.tier === "paid";
     var html = '<div class="rHead"><div class="rName">' + d.name +
       '<span class="rBand" style="background:' + d.bandColor + '">' + d.band + '</span></div>' +
       '<div class="rMeta">' + (d.city || "") + (d.developer ? " · " + d.developer : "") + '</div></div>' +
       '<div class="rTop"><div class="rRadarWrap"><canvas class="rRadar" id="rRadarCv" width="1080" height="1080"></canvas></div>' +
       '<div><div class="rScoreLbl">SCARCE SCORE</div><div class="rScoreVal">' + d.score.toFixed(1) + '<small>/ 100</small></div>' +
       '<div class="rBandRow"><span class="rBand" style="background:' + d.bandColor + '">' + d.band + '</span></div>' +
-      (isPaid && d.summary ? '<p class="rSummary">' + d.summary + '</p>' : '') +
+      (d.summary ? '<p class="rSummary">' + d.summary + '</p>' : '') +
       (d.scarcityOverrideApplied ? '<div class="rOverride">Scarcity override applied — capped at 49.</div>' : '') +
       '</div></div>';
 
-    if(isPaid){
-      html += '<div class="rDivide"><span>The reasoning — how it scored, and why</span></div><div class="rReasoning">';
-      d.categoryOrder.forEach(function(c){
-        var cat = d.categories[c];
-        if(!cat) return;
-        var sc = cat.score;
-        var bc = sc>=4?"#0B7A76":sc>=3?"#35A8A3":sc>=2?"#C9952B":sc>=1?"#D9772F":"#C0392B";
-        html += '<div class="rCat"><div class="rCatHead"><span class="rCatName">' + c + '</span><span class="rCatScore">' + sc.toFixed(1) + ' / 5</span></div>' +
-          '<div class="rBar"><div class="rBarFill" style="width:' + (sc/5*100) + '%;background:' + bc + '"></div></div>' +
-          '<p class="rCatWhy">' + (cat.why || "") + '</p></div>';
-      });
-      html += '</div>';
-    } else {
-      html += '<div class="rGate"><h3>See the full reasoning behind this score</h3>' +
-        '<p>Sign in to unlock the category-by-category breakdown and why each score landed where it did.</p>' +
-        '<a href="auth.html?mode=signup">Sign up free</a></div>';
-    }
+    html += '<div class="rDivide"><span>The reasoning — how it scored, and why</span></div><div class="rReasoning">';
+    d.categoryOrder.forEach(function(c){
+      var cat = d.categories[c];
+      if(!cat) return;
+      var sc = cat.score;
+      var bc = sc>=4?"#0B7A76":sc>=3?"#35A8A3":sc>=2?"#C9952B":sc>=1?"#D9772F":"#C0392B";
+      html += '<div class="rCat"><div class="rCatHead"><span class="rCatName">' + c + '</span><span class="rCatScore">' + sc.toFixed(1) + ' / 5</span></div>' +
+        '<div class="rBar"><div class="rBarFill" style="width:' + (sc/5*100) + '%;background:' + bc + '"></div></div>' +
+        '<p class="rCatWhy">' + (cat.why || "") + '</p></div>';
+    });
+    html += '</div>';
 
     app.innerHTML = html;
     bigRadar(document.getElementById("rRadarCv"), d.categories, d.categoryOrder, d.bandColor, d.score);
+  }
+
+  // Shown when the caller isn't a paid member — no score/radar data
+  // exists in this case at all (the backend never sends it), so this
+  // is a completely separate render path, not a partial view.
+  function renderGate(name){
+    var app = document.getElementById("scarce-ratings-app");
+    app.innerHTML =
+      '<div class="rGate" style="margin-top:0">' +
+      '<h3>' + (name ? name + " — " : "") + 'Full ratings are for members</h3>' +
+      '<p>Sign in with a paid account to see the Scarce Score, the radar, and the full category-by-category reasoning for this community.</p>' +
+      '<a href="auth.html?mode=signup">Sign up</a></div>';
   }
 
   async function load(){
@@ -192,6 +197,11 @@
         method: "POST", headers: headers, body: JSON.stringify({ slug: slug })
       });
       var d = await res.json();
+
+      if(res.status === 403 && d.error === "paid_required"){
+        renderGate(d.name);
+        return;
+      }
       if(d.error){ throw new Error(d.error); }
       render(d);
     } catch(e){

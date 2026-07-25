@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feasibility Study — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:1180px;margin:0 auto;padding:4px 16px 40px}
+  #fs *{box-sizing:border-box}
+  .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:16px 0 14px}
+  .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+
+  .modeTabs{display:flex;gap:6px;margin-bottom:16px;background:var(--mid);padding:5px;border-radius:11px;max-width:520px}
+  .modeTab{flex:1;text-align:center;padding:11px 10px;border-radius:8px;font-weight:700;font-size:13px;color:var(--grey);cursor:pointer}
+  .modeTab.on{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(20,24,28,.08)}
+  .modePanel{display:none}
+  .modePanel.on{display:block}
+
+  .secCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .secCard .collapsible-head h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:800;margin:0}
+  .secCard .collapsible-body{margin-top:14px}
+  .fGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:900px){.fGrid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.fGrid{grid-template-columns:1fr}}
+  .fld label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--grey);font-weight:600;margin-bottom:5px}
+  .fld label b{color:var(--navy);font-weight:800}
+  .fld input, .fld select{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px;background:var(--cream);color:var(--navy);font-weight:600}
+  .fld input:focus, .fld select:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .runBtn{background:var(--teal);color:#fff;border:none;font:inherit;font-weight:700;font-size:14px;padding:12px 24px;border-radius:9px;cursor:pointer;margin:6px 0 20px}
+  .runBtn:hover{background:var(--teal-deep)}
+  .runBtn:disabled{background:var(--grey);cursor:not-allowed}
+
+  .headlineRow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:760px){.headlineRow{grid-template-columns:1fr 1fr}}
+  .hCard{background:var(--navy);border-radius:12px;padding:16px;text-align:center}
+  .hCard .hLbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#B9BDC2;font-weight:700}
+  .hCard .hVal{font-size:24px;font-weight:800;color:#fff;margin-top:4px}
+  .hCard.good .hVal{color:#7FD6C9}
+  .hCard.bad .hVal{color:#F0A87A}
+
+  .resGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:14px}
+  @media(max-width:760px){.resGrid{grid-template-columns:1fr}}
+  .sumCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .sumCard h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px}
+  .sLine{display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--line);color:var(--grey)}
+  .sLine:last-child{border-bottom:0}
+  .sLine .v{font-weight:700;color:var(--ink)}
+
+  .insightBox{padding:14px 16px;border-radius:10px;font-size:13px;line-height:1.5;border-left:4px solid var(--teal);background:var(--mid);margin-bottom:14px}
+  .insightBox.warn{border-left-color:var(--orange);background:#FDF3EA}
+  .insightBox b{color:var(--navy)}
+
+  .chartWrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .chartWrap h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px}
+  #cfChartRental{width:100%;height:200px;display:block}
+
+  .rGate{background:var(--navy);border-radius:14px;padding:40px 30px;color:#fff;text-align:center;max-width:520px;margin:60px auto}
+  .rGate h3{font-size:19px;font-weight:800;margin-bottom:8px}
+  .rGate p{font-size:13.5px;color:#C9CDD2;margin-bottom:16px;line-height:1.5}
+  .rGate a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px}
+  .loading{color:var(--grey);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div id="fs"><p class="loading">Checking your account…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var AED = function(n){ return "AED " + Math.round(n).toLocaleString("en-AE"); };
+
+  var CALC_UI = ''+
+  '<div class="toolTitle">SCARCE <span>Feasibility Study</span></div>'+
+  '<div class="modeTabs">'+
+    '<div class="modeTab on" data-mode="hold">Buy &amp; Hold</div>'+
+    '<div class="modeTab" data-mode="flip">Buy, Renovate &amp; Sell</div>'+
+  '</div>'+
+
+  '<div class="modePanel on" id="panelHold">'+
+    '<div class="secCard"><div class="collapsible-head" id="hHead1"><h2>Property &amp; Hold</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body" id="hBody1"><div class="fGrid">'+
+      '<div class="fld"><label>Price (AED)</label><input type="number" id="h_price" value="1500000"></div>'+
+      '<div class="fld"><label>Size (sqft)</label><input type="number" id="h_size" value="900"></div>'+
+      '<div class="fld"><label>Hold (years)</label><input type="number" id="h_hold" value="5"></div>'+
+      '<div class="fld"><label>Funding</label><select id="h_fund"><option value="mortgage">Mortgage</option><option value="cash">Cash</option></select></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head" id="hHead2"><h2>Financing</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body" id="hBody2"><div class="fGrid">'+
+      '<div class="fld"><label>Down payment (%)</label><input type="number" id="h_dpPct" value="20"></div>'+
+      '<div class="fld"><label>Interest rate (%)</label><input type="number" id="h_rate" value="4.5" step="0.1"></div>'+
+      '<div class="fld"><label>Term (years)</label><input type="number" id="h_term" value="25"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head" id="hHead3"><h2>Rental Assumptions</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body" id="hBody3"><div class="fGrid">'+
+      '<div class="fld"><label>Gross rent (% of price)</label><input type="number" id="h_rentPct" value="7" step="0.1"></div>'+
+      '<div class="fld"><label>Vacancy (%)</label><input type="number" id="h_vacancyPct" value="5"></div>'+
+      '<div class="fld"><label>Appreciation (%/yr)</label><input type="number" id="h_appPct" value="5" step="0.1"></div>'+
+      '<div class="fld"><label>Rent growth (%/yr)</label><input type="number" id="h_rentGrowthPct" value="3" step="0.1"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="hHead4"><h2>Costs &amp; Charges</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="hBody4"><div class="fGrid">'+
+      '<div class="fld"><label>Service charge (AED/sqft/yr)</label><input type="number" id="h_scPsf" value="15"></div>'+
+      '<div class="fld"><label>Management (%)</label><input type="number" id="h_mgmtPct" value="5"></div>'+
+      '<div class="fld"><label>Maintenance (%)</label><input type="number" id="h_maintPct" value="3"></div>'+
+      '<div class="fld"><label>Insurance (% of price)</label><input type="number" id="h_insurePct" value="0.3" step="0.1"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="hHead5"><h2>Acquisition Fees</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="hBody5"><div class="fGrid">'+
+      '<div class="fld"><label>DLD transfer (%)</label><input type="number" id="h_dldPct" value="4"></div>'+
+      '<div class="fld"><label>DLD admin (AED)</label><input type="number" id="h_dldAdmin" value="580"></div>'+
+      '<div class="fld"><label>Title deed (AED)</label><input type="number" id="h_titleDeed" value="250"></div>'+
+      '<div class="fld"><label>Agent commission (%)</label><input type="number" id="h_agentPct" value="2"></div>'+
+      '<div class="fld"><label>Trustee fee (AED)</label><input type="number" id="h_trustee" value="3000"></div>'+
+      '<div class="fld"><label>Conveyancing (AED)</label><input type="number" id="h_conveyance" value="1500"></div>'+
+      '<div class="fld"><label>Valuation (AED)</label><input type="number" id="h_valuation" value="3000"></div>'+
+      '<div class="fld"><label>Mortgage fee (%)</label><input type="number" id="h_mortFeePct" value="1"></div>'+
+      '<div class="fld"><label>Mortgage registration (%)</label><input type="number" id="h_mortRegPct" value="0.25" step="0.01"></div>'+
+      '<div class="fld"><label>NOC (AED)</label><input type="number" id="h_noc" value="500"></div>'+
+      '<div class="fld"><label>DEWA deposit (AED)</label><input type="number" id="h_dewa" value="2000"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="hHead6"><h2>Exit Assumptions</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="hBody6"><div class="fGrid">'+
+      '<div class="fld"><label>Sell agent commission (%)</label><input type="number" id="h_sellAgentPct" value="2"></div>'+
+      '<div class="fld"><label>Early settlement (%)</label><input type="number" id="h_earlySettlePct" value="1"></div>'+
+      '<div class="fld"><label>Early settlement cap (AED)</label><input type="number" id="h_earlySettleCap" value="10000"></div>'+
+    '</div></div></div>'+
+
+    '<button class="runBtn" id="runHold">Run Feasibility Study</button>'+
+    '<div id="holdResults"></div>'+
+  '</div>'+
+
+  '<div class="modePanel" id="panelFlip">'+
+    '<div class="secCard"><div class="collapsible-head" id="fHead1"><h2>Property &amp; Renovation</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body" id="fBody1"><div class="fGrid">'+
+      '<div class="fld"><label>Purchase price (AED)</label><input type="number" id="f_price" value="1500000"></div>'+
+      '<div class="fld"><label>Size (sqft)</label><input type="number" id="f_size" value="900"></div>'+
+      '<div class="fld"><label>Renovation cost (AED)</label><input type="number" id="f_renovationCost" value="150000"></div>'+
+      '<div class="fld"><label>Construction (months)</label><input type="number" id="f_constructionMonths" value="4"></div>'+
+      '<div class="fld"><label>Post-renovation value (AED)</label><input type="number" id="f_postRenoValue" value="1800000"></div>'+
+      '<div class="fld"><label>Hold after renovation (months)</label><input type="number" id="f_holdAfterRenoMonths" value="2"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head" id="fHead2"><h2>Financing</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body" id="fBody2"><div class="fGrid">'+
+      '<div class="fld"><label>Funding</label><select id="f_fund"><option value="cash">Cash</option><option value="mortgage">Mortgage</option></select></div>'+
+      '<div class="fld"><label>Down payment (%)</label><input type="number" id="f_dpPct" value="100"></div>'+
+      '<div class="fld"><label>Interest rate (%)</label><input type="number" id="f_rate" value="4.5" step="0.1"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="fHead3"><h2>Carrying Costs</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="fBody3"><div class="fGrid">'+
+      '<div class="fld"><label>Service charge (AED/sqft/yr)</label><input type="number" id="f_scPsf" value="15"></div>'+
+      '<div class="fld"><label>Insurance (% of price)</label><input type="number" id="f_insurePct" value="0.3" step="0.1"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="fHead4"><h2>Acquisition Fees</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="fBody4"><div class="fGrid">'+
+      '<div class="fld"><label>DLD transfer (%)</label><input type="number" id="f_dldPct" value="4"></div>'+
+      '<div class="fld"><label>DLD admin (AED)</label><input type="number" id="f_dldAdmin" value="580"></div>'+
+      '<div class="fld"><label>Title deed (AED)</label><input type="number" id="f_titleDeed" value="250"></div>'+
+      '<div class="fld"><label>Agent commission (%)</label><input type="number" id="f_agentPct" value="2"></div>'+
+      '<div class="fld"><label>Trustee fee (AED)</label><input type="number" id="f_trustee" value="3000"></div>'+
+      '<div class="fld"><label>Conveyancing (AED)</label><input type="number" id="f_conveyance" value="1500"></div>'+
+      '<div class="fld"><label>Valuation (AED)</label><input type="number" id="f_valuation" value="3000"></div>'+
+      '<div class="fld"><label>Mortgage fee (%)</label><input type="number" id="f_mortFeePct" value="1"></div>'+
+      '<div class="fld"><label>Mortgage registration (%)</label><input type="number" id="f_mortRegPct" value="0.25" step="0.01"></div>'+
+      '<div class="fld"><label>NOC (AED)</label><input type="number" id="f_noc" value="500"></div>'+
+      '<div class="fld"><label>DEWA deposit (AED)</label><input type="number" id="f_dewa" value="2000"></div>'+
+    '</div></div></div>'+
+
+    '<div class="secCard"><div class="collapsible-head collapsed" id="fHead5"><h2>Exit Assumptions</h2><span class="chevron">▾</span></div>'+
+    '<div class="collapsible-body collapsed" id="fBody5"><div class="fGrid">'+
+      '<div class="fld"><label>Sell agent commission (%)</label><input type="number" id="f_sellAgentPct" value="2"></div>'+
+    '</div></div></div>'+
+
+    '<button class="runBtn" id="runFlip">Run Feasibility Study</button>'+
+    '<div id="flipResults"></div>'+
+  '</div>';
+
+  function initCollapsibles(){
+    for(var i=1;i<=6;i++){
+      var h = $("hHead"+i), b = $("hBody"+i);
+      if(h && b) makeCollapsible(h, b, h.classList.contains("collapsed"));
+    }
+    for(var j=1;j<=5;j++){
+      var hf = $("fHead"+j), bf = $("fBody"+j);
+      if(hf && bf) makeCollapsible(hf, bf, hf.classList.contains("collapsed"));
+    }
+  }
+
+  function initTabs(){
+    document.querySelectorAll(".modeTab").forEach(function(t){
+      t.addEventListener("click", function(){
+        document.querySelectorAll(".modeTab").forEach(function(x){ x.classList.remove("on"); });
+        document.querySelectorAll(".modePanel").forEach(function(x){ x.classList.remove("on"); });
+        t.classList.add("on");
+        $(t.dataset.mode === "hold" ? "panelHold" : "panelFlip").classList.add("on");
+      });
+    });
+  }
+
+  async function authedHeaders(){
+    var session = (await sb.auth.getSession()).data.session;
+    return {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_PUBLISHABLE_KEY,
+      "Authorization": "Bearer " + (session ? session.access_token : SUPABASE_PUBLISHABLE_KEY)
+    };
+  }
+
+  function drawCashflowChart(canvas, yearly){
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 600, cssH = 200;
+    canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+    var ctx = canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cssW,cssH);
+    var padL=8,padR=8,padT=10,padB=20,w=cssW-padL-padR,h=cssH-padT-padB;
+    var cfs = yearly.map(function(y){ return y.cf; });
+    var cum=0, cums = yearly.map(function(y){ cum+=y.cf; return cum; });
+    var maxV = Math.max.apply(null, cfs.concat(cums,[0])), minV = Math.min.apply(null, cfs.concat(cums,[0]));
+    if(maxV===minV){maxV+=1;minV-=1;}
+    var pad=(maxV-minV)*0.15; maxV+=pad; minV-=pad;
+    function Y(v){ return padT+(maxV-v)/(maxV-minV)*h; }
+    var zeroY=Y(0);
+    ctx.strokeStyle="rgba(20,24,28,.15)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padL,zeroY); ctx.lineTo(padL+w,zeroY); ctx.stroke();
+    var n=yearly.length, bw=Math.max(4,w/n*0.5), gap=w/n;
+    for(var i=0;i<n;i++){
+      var cx=padL+gap*i+gap/2, v=cfs[i], y0=Y(0), y1=Y(v);
+      var top=Math.min(y0,y1), hgt=Math.max(Math.abs(y1-y0),0.5);
+      ctx.fillStyle = v>=0 ? "#0E9B96" : "#C0392B";
+      ctx.fillRect(cx-bw/2, top, bw, hgt);
+    }
+    ctx.strokeStyle="#C9952B"; ctx.lineWidth=2; ctx.beginPath();
+    for(var j=0;j<n;j++){ var cx2=padL+gap*j+gap/2, y=Y(cums[j]); j?ctx.lineTo(cx2,y):ctx.moveTo(cx2,y); }
+    ctx.stroke();
+    ctx.fillStyle="#7A7F87"; ctx.font="10px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign="center";
+    for(var k=0;k<n;k++){ var cx3=padL+gap*k+gap/2; ctx.fillText("Y"+yearly[k].y, cx3, cssH-6); }
+  }
+
+  function renderCalculator(){
+    $("fs").innerHTML = CALC_UI;
+    initTabs();
+    initCollapsibles();
+
+    $("runHold").addEventListener("click", async function(){
+      var btn = this; btn.disabled = true; btn.textContent = "Calculating…";
+      var body = {
+        price:+$("h_price").value, size:+$("h_size").value, hold:+$("h_hold").value, fund:$("h_fund").value,
+        dpPct:+$("h_dpPct").value, rate:+$("h_rate").value, term:+$("h_term").value,
+        rentPct:+$("h_rentPct").value, vacancyPct:+$("h_vacancyPct").value, appPct:+$("h_appPct").value, rentGrowthPct:+$("h_rentGrowthPct").value,
+        scPsf:+$("h_scPsf").value, mgmtPct:+$("h_mgmtPct").value, maintPct:+$("h_maintPct").value, insurePct:+$("h_insurePct").value,
+        dldPct:+$("h_dldPct").value, dldAdmin:+$("h_dldAdmin").value, titleDeed:+$("h_titleDeed").value, agentPct:+$("h_agentPct").value,
+        trustee:+$("h_trustee").value, conveyance:+$("h_conveyance").value, valuation:+$("h_valuation").value,
+        mortFeePct:+$("h_mortFeePct").value, mortRegPct:+$("h_mortRegPct").value, noc:+$("h_noc").value, dewa:+$("h_dewa").value,
+        sellAgentPct:+$("h_sellAgentPct").value, earlySettlePct:+$("h_earlySettlePct").value, earlySettleCap:+$("h_earlySettleCap").value
+      };
+      try {
+        var headers = await authedHeaders();
+        var res = await fetch(FUNCTIONS_URL + "/calculate-feasibility", { method:"POST", headers:headers, body:JSON.stringify(body) });
+        var d = await res.json();
+        if(d.error){ throw new Error(d.message || d.error); }
+
+        var goodProfit = d.headline.netProfit >= 0;
+        var html = '<div class="headlineRow">'+
+          '<div class="hCard '+(goodProfit?"good":"bad")+'"><div class="hLbl">Net Profit</div><div class="hVal">'+AED(d.headline.netProfit)+'</div></div>'+
+          '<div class="hCard"><div class="hLbl">ROI</div><div class="hVal">'+d.headline.roi.toFixed(1)+'%</div></div>'+
+          '<div class="hCard"><div class="hLbl">Annualized Return</div><div class="hVal">'+d.headline.annualizedReturn.toFixed(1)+'%</div></div>'+
+          '<div class="hCard"><div class="hLbl">Net Yield (Yr 1)</div><div class="hVal">'+d.headline.netYield.toFixed(1)+'%</div></div>'+
+        '</div>'+
+        '<div class="resGrid">'+
+          '<div class="sumCard"><h3>Cash Summary</h3>'+
+            '<div class="sLine"><span>Down payment</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
+            '<div class="sLine"><span>Upfront costs</span><span class="v">'+AED(d.cashSummary.upfront)+'</span></div>'+
+            '<div class="sLine"><span>Total rent collected</span><span class="v">'+AED(d.cashSummary.totRent)+'</span></div>'+
+            '<div class="sLine"><span>Total operating costs</span><span class="v">'+AED(d.cashSummary.totOpex)+'</span></div>'+
+            '<div class="sLine"><span>Total debt service</span><span class="v">'+AED(d.cashSummary.totDebt)+'</span></div>'+
+            '<div class="sLine"><span>Net sale proceeds</span><span class="v">'+AED(d.cashSummary.netSale)+'</span></div>'+
+          '</div>'+
+          '<div class="sumCard"><h3>Profit Summary</h3>'+
+            '<div class="sLine"><span>Rent collected</span><span class="v">'+AED(d.profitSummary.totRent)+'</span></div>'+
+            '<div class="sLine"><span>Operating costs</span><span class="v">-'+AED(d.profitSummary.totOpex)+'</span></div>'+
+            '<div class="sLine"><span>Upfront costs</span><span class="v">-'+AED(d.profitSummary.upfront)+'</span></div>'+
+            '<div class="sLine"><span>Interest paid</span><span class="v">-'+AED(d.profitSummary.totInterest)+'</span></div>'+
+            '<div class="sLine"><span>Exit costs</span><span class="v">-'+AED(d.profitSummary.exitCosts)+'</span></div>'+
+            '<div class="sLine"><span>Appreciation</span><span class="v">+'+AED(d.profitSummary.appreciation)+'</span></div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="chartWrap"><h3>Yearly Cash Flow</h3><canvas id="cfChartRental"></canvas></div>';
+
+        $("holdResults").innerHTML = html;
+        drawCashflowChart($("cfChartRental"), d.yearly);
+      } catch(e){
+        $("holdResults").innerHTML = '<p style="color:#C0392B">Could not calculate — ' + e.message + '</p>';
+      } finally {
+        btn.disabled = false; btn.textContent = "Run Feasibility Study";
+      }
+    });
+
+    $("runFlip").addEventListener("click", async function(){
+      var btn = this; btn.disabled = true; btn.textContent = "Calculating…";
+      var body = {
+        price:+$("f_price").value, size:+$("f_size").value, fund:$("f_fund").value,
+        dpPct:+$("f_dpPct").value, rate:+$("f_rate").value,
+        renovationCost:+$("f_renovationCost").value, constructionMonths:+$("f_constructionMonths").value,
+        postRenoValue:+$("f_postRenoValue").value, holdAfterRenoMonths:+$("f_holdAfterRenoMonths").value,
+        dldPct:+$("f_dldPct").value, dldAdmin:+$("f_dldAdmin").value, titleDeed:+$("f_titleDeed").value, agentPct:+$("f_agentPct").value,
+        trustee:+$("f_trustee").value, conveyance:+$("f_conveyance").value, valuation:+$("f_valuation").value,
+        mortFeePct:+$("f_mortFeePct").value, mortRegPct:+$("f_mortRegPct").value, noc:+$("f_noc").value, dewa:+$("f_dewa").value,
+        scPsf:+$("f_scPsf").value, insurePct:+$("f_insurePct").value, sellAgentPct:+$("f_sellAgentPct").value
+      };
+      try {
+        var headers = await authedHeaders();
+        var res = await fetch(FUNCTIONS_URL + "/calculate-flip-feasibility", { method:"POST", headers:headers, body:JSON.stringify(body) });
+        var d = await res.json();
+        if(d.error){ throw new Error(d.message || d.error); }
+
+        var goodProfit = d.headline.netProfit >= 0;
+        var html = '<div class="headlineRow">'+
+          '<div class="hCard '+(goodProfit?"good":"bad")+'"><div class="hLbl">Net Profit</div><div class="hVal">'+AED(d.headline.netProfit)+'</div></div>'+
+          '<div class="hCard"><div class="hLbl">ROI</div><div class="hVal">'+d.headline.roi.toFixed(1)+'%</div></div>'+
+          '<div class="hCard"><div class="hLbl">Annualized ROI</div><div class="hVal">'+d.headline.annualizedRoi.toFixed(1)+'%</div></div>'+
+          '<div class="hCard"><div class="hLbl">Total Hold</div><div class="hVal">'+d.headline.totalHoldMonths+' mo</div></div>'+
+        '</div>';
+
+        if(d.insights.renovationMayNotPayOff){
+          html += '<div class="insightBox warn"><b>The renovation may not pay for itself.</b> The value uplift (' + AED(d.insights.upliftValue) + ') is less than the renovation cost — this deal only works if the post-renovation value estimate holds up under real appraisal.</div>';
+        } else if(d.insights.upliftVsRenoCostRatio !== null) {
+          html += '<div class="insightBox"><b>Value uplift is ' + d.insights.upliftVsRenoCostRatio.toFixed(2) + '× the renovation cost.</b> Every AED spent on renovation is adding ' + d.insights.upliftVsRenoCostRatio.toFixed(2) + ' AED of value, before financing and exit costs.</div>';
+        }
+
+        html += '<div class="resGrid">'+
+          '<div class="sumCard"><h3>Cash Summary</h3>'+
+            '<div class="sLine"><span>Down payment</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
+            '<div class="sLine"><span>Upfront costs</span><span class="v">'+AED(d.cashSummary.upfront)+'</span></div>'+
+            '<div class="sLine"><span>Renovation cost</span><span class="v">'+AED(d.cashSummary.renovationCost)+'</span></div>'+
+            '<div class="sLine"><span>Total carrying costs</span><span class="v">'+AED(d.cashSummary.totalCarryingCosts)+'</span></div>'+
+            '<div class="sLine"><span>Net sale proceeds</span><span class="v">'+AED(d.cashSummary.netSaleProceeds)+'</span></div>'+
+          '</div>'+
+          '<div class="sumCard"><h3>Profit Summary</h3>'+
+            '<div class="sLine"><span>Post-renovation value</span><span class="v">'+AED(d.profitSummary.postRenoValue)+'</span></div>'+
+            '<div class="sLine"><span>Purchase price</span><span class="v">-'+AED(d.profitSummary.purchasePrice)+'</span></div>'+
+            '<div class="sLine"><span>Renovation cost</span><span class="v">-'+AED(d.profitSummary.renovationCost)+'</span></div>'+
+            '<div class="sLine"><span>Upfront costs</span><span class="v">-'+AED(d.profitSummary.upfront)+'</span></div>'+
+            '<div class="sLine"><span>Interest + charges</span><span class="v">-'+AED(d.profitSummary.totalInterest + d.profitSummary.totalServiceCharge + d.profitSummary.totalInsurance)+'</span></div>'+
+            '<div class="sLine"><span>Exit costs</span><span class="v">-'+AED(d.profitSummary.exitCosts)+'</span></div>'+
+          '</div>'+
+        '</div>';
+
+        $("flipResults").innerHTML = html;
+      } catch(e){
+        $("flipResults").innerHTML = '<p style="color:#C0392B">Could not calculate — ' + e.message + '</p>';
+      } finally {
+        btn.disabled = false; btn.textContent = "Run Feasibility Study";
+      }
+    });
+
+    // Run once on load with defaults so the page isn't empty
+    $("runHold").click();
+  }
+
+  function renderGate(){
+    $("fs").innerHTML = '<div class="rGate"><h3>Feasibility Study is for paid members</h3>'+
+      '<p>Sign in with a paid account to run full cash-flow and ROI models — both buy-and-hold and buy-renovate-sell scenarios.</p>'+
+      '<a href="auth.html?mode=signup">Sign up</a></div>';
+  }
+
+  async function init(){
+    var session = (await sb.auth.getSession()).data.session;
+    if(!session){ renderGate(); return; }
+    var profRes = await sb.from("profiles").select("tier").eq("id", session.user.id).single();
+    if(profRes.data && profRes.data.tier === "paid"){
+      renderCalculator();
+    } else {
+      renderGate();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

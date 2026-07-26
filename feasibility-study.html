@@ -347,6 +347,33 @@
     $(containerId).innerHTML = renderTableHTML(t.headers, t.rows);
   }
 
+  // ---- Flip-tab equivalents. Flip has no "yearly" array from the
+  // backend (a flip is a single short transaction, not a multi-year
+  // hold) — everything here buckets from the monthly timeline using
+  // plain month counts (M1, M2...) rather than year-relative labels. ----
+
+  function getBucketedDataFlip(result, granularity){
+    var size = granularity === "annual" ? 12 : granularity === "quarterly" ? 3 : 1;
+    var labelFn = granularity === "annual"
+      ? function(first){ return "Y"+Math.ceil(first.m/12); }
+      : granularity === "quarterly"
+      ? function(first){ return "Q"+Math.ceil(first.m/3); }
+      : function(first){ return "M"+first.m; };
+    return bucketFeasibility(result.monthly, size, labelFn);
+  }
+
+  function getTableDataFlip(result, granularity){
+    var bucketed = getBucketedDataFlip(result, granularity);
+    var headers = ["Period","Net Cash Flow (AED)","Cumulative (AED)"];
+    var rows = bucketed.map(function(b){ return [b.label, Math.round(b.cf), Math.round(b.cum)]; });
+    return { headers: headers, rows: rows };
+  }
+
+  function renderCashflowTableFlip(containerId, result, granularity){
+    var t = getTableDataFlip(result, granularity);
+    $(containerId).innerHTML = renderTableHTML(t.headers, t.rows);
+  }
+
   function exportExcel(headers, rows, filename){
     var aoa = [headers].concat(rows);
     var ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -377,6 +404,7 @@
 
   function renderCalculator(){
     var lastHoldResult = null;
+    var lastFlipResult = null;
     $("fs").innerHTML = CALC_UI;
     initTabs();
     initCollapsibles();
@@ -509,9 +537,37 @@
             '<div class="sLine"><span>Interest + charges</span><span class="v">-'+AED(d.profitSummary.totalInterest + d.profitSummary.totalServiceCharge + d.profitSummary.totalInsurance)+'</span></div>'+
             '<div class="sLine"><span>Exit costs</span><span class="v">-'+AED(d.profitSummary.exitCosts)+'</span></div>'+
           '</div>'+
-        '</div>';
+        '</div>'+
+        '<div class="chartWrap"><h3>Cash Flow <span style="float:right"><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartFlip"></canvas></div>'+
+        '<div class="tableWrap"><div class="tableHead"><h3>Cash Flow Detail</h3><div class="exportBtns">'+
+          '<button class="exportBtn" id="exportExcelBtnFlip">Export Excel</button>'+
+          '<button class="exportBtn" id="exportPdfBtnFlip">Export PDF</button>'+
+        '</div></div><div id="cfTableFlip"></div></div>';
 
         $("flipResults").innerHTML = html;
+        lastFlipResult = d;
+        var currentGranFlip = "annual";
+        drawCashflowChart($("cfChartFlip"), getBucketedDataFlip(d, currentGranFlip));
+        renderCashflowTableFlip("cfTableFlip", d, currentGranFlip);
+
+        $("flipResults").querySelectorAll(".granBtnFs").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            $("flipResults").querySelectorAll(".granBtnFs").forEach(function(b){ b.classList.remove("on"); });
+            btn.classList.add("on");
+            currentGranFlip = btn.dataset.g;
+            drawCashflowChart($("cfChartFlip"), getBucketedDataFlip(lastFlipResult, currentGranFlip));
+            renderCashflowTableFlip("cfTableFlip", lastFlipResult, currentGranFlip);
+          });
+        });
+
+        $("exportExcelBtnFlip").addEventListener("click", function(){
+          var t = getTableDataFlip(lastFlipResult, currentGranFlip);
+          exportExcel(t.headers, t.rows, "scarce-flip-feasibility-cashflow.xlsx");
+        });
+        $("exportPdfBtnFlip").addEventListener("click", function(){
+          var t = getTableDataFlip(lastFlipResult, currentGranFlip);
+          exportPDF(t.headers, t.rows, "Scarce Flip Feasibility Study — Cash Flow");
+        });
       } catch(e){
         $("flipResults").innerHTML = '<p style="color:#C0392B">Could not calculate — ' + e.message + '</p>';
       } finally {

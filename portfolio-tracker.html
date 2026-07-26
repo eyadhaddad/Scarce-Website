@@ -40,6 +40,19 @@
         <button class="granBtn" data-g="quarterly">Quarterly</button>
         <button class="granBtn" data-g="annual">Annual</button>
       </div>
+      <div class="cfProjectionWrap">
+        <label class="projLbl">Project</label>
+        <select id="projectionMonths">
+          <option value="3">3 months</option>
+          <option value="6">6 months</option>
+          <option value="9">9 months</option>
+          <option value="12" selected>12 months</option>
+          <option value="15">15 months</option>
+          <option value="18">18 months</option>
+          <option value="21">21 months</option>
+          <option value="24">24 months</option>
+        </select>
+      </div>
       <div class="cfFilterWrap">
         <button class="filterToggle" id="filterToggle">Filter properties ▾</button>
         <div class="filterDropdown" id="filterDropdown" style="display:none">
@@ -50,11 +63,11 @@
     </div>
 
     <div class="cfSummary">
-      <div class="cfNum"><div class="cfLbl">Rent in</div><div class="cfVal in" id="cfRent">—</div></div>
-      <div class="cfNum"><div class="cfLbl">Mortgage out</div><div class="cfVal out" id="cfMortgage">—</div></div>
-      <div class="cfNum"><div class="cfLbl">Service charge</div><div class="cfVal out" id="cfService">—</div></div>
-      <div class="cfNum"><div class="cfLbl">Off-plan due</div><div class="cfVal out" id="cfOffplan">—</div></div>
-      <div class="cfNum total"><div class="cfLbl">Net this period</div><div class="cfVal" id="cfNet">—</div></div>
+      <div class="cfNum"><div class="cfLbl" id="cfRentLbl">Rent in</div><div class="cfVal in" id="cfRent">—</div></div>
+      <div class="cfNum"><div class="cfLbl" id="cfMortgageLbl">Mortgage out</div><div class="cfVal out" id="cfMortgage">—</div></div>
+      <div class="cfNum"><div class="cfLbl" id="cfServiceLbl">Service charge</div><div class="cfVal out" id="cfService">—</div></div>
+      <div class="cfNum"><div class="cfLbl" id="cfOffplanLbl">Off-plan due</div><div class="cfVal out" id="cfOffplan">—</div></div>
+      <div class="cfNum total"><div class="cfLbl" id="cfNetLbl">Net</div><div class="cfVal" id="cfNet">—</div></div>
     </div>
 
     <div class="cfChartWrap">
@@ -214,6 +227,10 @@
 #scarce-portfolio .offplanHint{font-size:11.5px;color:var(--grey);font-style:italic;margin-top:8px}
 #scarce-portfolio .cfControls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 #scarce-portfolio .cfGran{display:flex;gap:5px}
+#scarce-portfolio .cfProjectionWrap{display:flex;align-items:center;gap:6px}
+#scarce-portfolio .projLbl{font-size:11px;color:#B9BDC2;font-weight:700}
+#scarce-portfolio .cfProjectionWrap select{background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff;font:inherit;font-size:11.5px;font-weight:700;padding:5px 8px;border-radius:7px}
+#scarce-portfolio .cfProjectionWrap select option{background:var(--navy);color:#fff}
 #scarce-portfolio .granBtn{padding:6px 14px;border:1px solid rgba(255,255,255,.2);border-radius:7px;background:transparent;color:#B9BDC2;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 #scarce-portfolio .granBtn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
 #scarce-portfolio .cfFilterWrap{position:relative}
@@ -312,6 +329,7 @@
   var clients = [];
   var isPaidTier = false; // controls branding on exports only — clients/grouping are available to everyone
   var granularity = "monthly";
+  var projectionMonths = 12;
   var selectedPropertyIds = null; // null = all properties
   var lastCashflowData = null;
 
@@ -398,17 +416,23 @@
       var res = await fetch(window.SCARCE_FUNCTIONS_URL + "/get-portfolio-cashflow", {
         method: "POST",
         headers: { "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyIds: selectedPropertyIds, granularity: granularity })
+        body: JSON.stringify({ propertyIds: selectedPropertyIds, granularity: granularity, monthsAhead: projectionMonths })
       });
       var data = await res.json();
       lastCashflowData = data;
 
-      var latest = data.timeline[0] || data.currentMonthBreakdown;
-      $("cfRent").textContent = AED(latest.rentIn);
-      $("cfMortgage").textContent = "-" + AED(latest.mortgageOut);
-      $("cfService").textContent = "-" + AED(latest.serviceChargeOut);
-      $("cfOffplan").textContent = "-" + AED(latest.offplanOut);
-      $("cfNet").textContent = AEDsigned(latest.net);
+      var t = data.totals || { rentIn: 0, mortgageOut: 0, serviceChargeOut: 0, offplanOut: 0, net: 0 };
+      var periodLabel = "(next " + projectionMonths + " mo)";
+      $("cfRentLbl").textContent = "Rent in " + periodLabel;
+      $("cfMortgageLbl").textContent = "Mortgage out " + periodLabel;
+      $("cfServiceLbl").textContent = "Service charge " + periodLabel;
+      $("cfOffplanLbl").textContent = "Off-plan due " + periodLabel;
+      $("cfNetLbl").textContent = "Net " + periodLabel;
+      $("cfRent").textContent = AED(t.rentIn);
+      $("cfMortgage").textContent = "-" + AED(t.mortgageOut);
+      $("cfService").textContent = "-" + AED(t.serviceChargeOut);
+      $("cfOffplan").textContent = "-" + AED(t.offplanOut);
+      $("cfNet").textContent = AEDsigned(t.net);
 
       drawCashflowChart(data.timeline);
     } catch(e){ console.error("Cashflow load failed:", e); }
@@ -422,6 +446,12 @@
       granularity = btn.dataset.g;
       loadCashflow();
     });
+  });
+
+  // ---- Projection period selector ----
+  $("projectionMonths").addEventListener("change", function(){
+    projectionMonths = +this.value;
+    loadCashflow();
   });
 
   // ---- Property filter dropdown ----

@@ -129,11 +129,14 @@
       '</div><div class="fGrid" id="propertyFields" style="margin-top:14px"></div></div>'+
 
       '<div class="secCard"><h2>Landlord (Lessor)</h2><div class="fGrid">'+
-        '<div class="fld"><label>Full name</label><input type="text" id="landlordName"></div>'+
+        '<div class="fld"><label>Owner\'s Name <span style="font-weight:400;color:var(--grey)">(if different from Lessor — Dubai only)</span></label><input type="text" id="ownerName"></div>'+
+        '<div class="fld"><label>Lessor\'s Full name</label><input type="text" id="landlordName"></div>'+
         '<div class="fld"><label>Emirates ID / License No.</label><input type="text" id="landlordId"></div>'+
         '<div class="fld"><label>Nationality</label><input type="text" id="landlordNationality"></div>'+
         '<div class="fld"><label>Phone</label><input type="text" id="landlordPhone"></div>'+
         '<div class="fld"><label>Email</label><input type="email" id="landlordEmail"></div>'+
+        '<div class="fld"><label>License No. <span style="font-weight:400;color:var(--grey)">(if a company — Dubai only)</span></label><input type="text" id="licenseNo"></div>'+
+        '<div class="fld"><label>Licensing Authority <span style="font-weight:400;color:var(--grey)">(if a company — Dubai only)</span></label><input type="text" id="licensingAuthority"></div>'+
       '</div></div>'+
 
       '<div class="secCard"><h2>Tenant</h2><div class="fGrid">'+
@@ -288,7 +291,9 @@
       extraFields = {
         plotNo: $("plotNo").value, makaniNo: $("makaniNo").value, buildingName: $("buildingName").value,
         propertyNo: $("propertyNo").value, propertyType: $("propertyType").value, areaSqm: $("areaSqm").value,
-        premisesNo: $("premisesNo").value, propertyUsage: $("propertyUsage").value, location: $("location").value
+        premisesNo: $("premisesNo").value, propertyUsage: $("propertyUsage").value, location: $("location").value,
+        ownerName: $("ownerName").value, licenseNo: $("licenseNo").value, licensingAuthority: $("licensingAuthority").value,
+        landlordEmail: $("landlordEmail").value, tenantEmail: $("tenantEmail").value
       };
     } else {
       extraFields = {
@@ -346,21 +351,109 @@
     var win = window.open("", "_blank");
     if(!win){ alert("Please allow pop-ups to view/print the contract."); return; }
 
-    var propRows = isDubai
-      ? [["Plot No.", "رقم الأرض", r.extra_fields.plotNo], ["Makani No.", "رقم مكاني", r.extra_fields.makaniNo],
-         ["Building Name", "اسم المبنى", r.extra_fields.buildingName], ["Property No.", "رقم العقار", r.extra_fields.propertyNo],
-         ["Property Type", "نوع الوحدة", r.extra_fields.propertyType], ["Area (sqm)", "مساحة العقار", r.extra_fields.areaSqm],
-         ["Premises No. (DEWA)", "رقم المبنى (ديوا)", r.extra_fields.premisesNo], ["Usage", "استخدام العقار", r.extra_fields.propertyUsage],
-         ["Location", "الموقع", r.extra_fields.location]]
-      : [["City", "المدينة", r.extra_fields.city], ["Community", "اسم المجمع", r.extra_fields.community],
-         ["Property Name/No.", "اسم/رقم العقار", r.extra_fields.propertyNo], ["No of BR", "عدد الغرف", r.extra_fields.bedrooms],
-         ["Property Type", "نوع العقار", r.extra_fields.propertyType], ["No. of Parking", "عدد مواقف السيارات", r.extra_fields.parkingCount]];
-
     function row(en, ar, val){
       return "<tr><td class='lbl'>"+en+"</td><td>"+esc(val||"—")+"</td><td class='lbl ar'>"+ar+"</td></tr>";
     }
     function sectionHeader(en, ar){
       return "<table class='section-title'><tr><td>"+en+"</td><td class='ar'>"+ar+"</td></tr></table>";
+    }
+
+    var bodyHtml;
+
+    if(isDubai){
+      var ef = r.extra_fields || {};
+      bodyHtml =
+        sectionHeader("Date", "التاريخ")+
+        "<table>"+ row("Date","التاريخ", new Date().toISOString().slice(0,10)) +"</table>"+
+
+        sectionHeader("Owner / Lessor Information", "معلومات المالك / المؤجر")+
+        "<table>"+
+          row("Owner's Name","اسم المالك", ef.ownerName || r.landlord_name)+
+          row("Lessor's Name","اسم المؤجر", r.landlord_name)+
+          row("Lessor's Emirates ID","الهوية الإماراتية للمؤجر", r.landlord_id_number)+
+          row("License No. (if a company)","رقم الرخصة في حال كانت شركة", ef.licenseNo)+
+          row("Licensing Authority (if a company)","سلطة الترخيص في حال كانت شركة", ef.licensingAuthority)+
+          row("Lessor's Email","البريد الإلكتروني للمؤجر", ef.landlordEmail)+
+          row("Lessor's Phone","رقم هاتف المؤجر", r.landlord_contact)+
+        "</table>"+
+
+        sectionHeader("Tenant Information", "معلومات المستأجر")+
+        "<table>"+
+          row("Tenant's Name","اسم المستأجر", r.tenant_name)+
+          row("Tenant's Emirates ID","الهوية الإماراتية للمستأجر", r.tenant_id_number)+
+          row("Tenant's Email","البريد الإلكتروني للمستأجر", ef.tenantEmail)+
+          row("Tenant's Phone","رقم هاتف المستأجر", r.tenant_contact)+
+        "</table>"+
+
+        sectionHeader("Property Information", "معلومات العقار")+
+        "<table>"+
+          row("Plot No.","رقم الأرض", ef.plotNo)+
+          row("Makani No.","رقم مكاني", ef.makaniNo)+
+          row("Location","الموقع", ef.location)+
+          row("Building Name","اسم المبنى", ef.buildingName)+
+          row("Property Type","نوع الوحدة", ef.propertyType)+
+          row("Property No.","رقم العقار", ef.propertyNo)+
+          row("Property Area (sqm)","مساحة العقار", ef.areaSqm)+
+          row("Premises No. (DEWA)","رقم المبنى (ديوا)", ef.premisesNo)+
+          row("Property Usage","استخدام العقار", ef.propertyUsage)+
+        "</table>"+
+
+        sectionHeader("Contract Information", "معلومات العقد")+
+        "<table>"+
+          row("Contract Period — From","فترة العقد - من", r.contract_start)+
+          row("Contract Period — To","فترة العقد - إلى", r.contract_end)+
+          row("Annual Rent (AED)","الايجار السنوي", r.annual_rent)+
+          row("Security Deposit Amount (AED)","مبلغ التأمين", r.security_deposit)+
+          row("Mode of Payment","طريقة الدفع", r.payment_terms)+
+        "</table>"+
+
+        sectionHeader("General Terms and Conditions", "الأحكام والشروط")+
+        terms.en.map(function(clause, i){
+          return "<div class='clause'>"+(i+1)+". "+esc(clause)+(terms.ar?"<span class='ar'>"+(i+1)+". "+esc(terms.ar[i])+"</span>":"")+"</div>";
+        }).join("")+
+        (additionalClausesHtml(r)) +
+        "<div class='sig'><div>Tenant Signature — توقيع المستأجر</div><div>Lessor Signature — توقيع المؤجر</div></div>"+
+
+        sectionHeader("Know your Rights", "لمعرفة حقوقكم")+
+        "<div class='clause'>You may visit the Rental Dispute Center website through www.dubailand.gov.ae in case of any rental dispute between parties. This contract is subject to Law No. 26 of 2007 regulating the relationship between landlords and tenants, Law No. 33 of 2008 amending Law No. 26 of 2007, and Law No. 43 of 2013 determining rent increases for properties."+
+        "<span class='ar'>يمكنكم زيارة موقع مركز فض المنازعات الإيجارية من خلال www.dubailand.gov.ae في حال نشوء أي نزاع إيجاري بين الأطراف. يخضع هذا العقد للقانون رقم 26 لسنة 2007 بشأن تنظيم العلاقة بين المؤجرين والمستأجرين، والقانون رقم 33 لسنة 2008 المعدل له، والقانون رقم 43 لسنة 2013 بشأن تحديد زيادة بدل الإيجار.</span></div>"+
+
+        sectionHeader("Attachments for Ejari Registration", "مرفقات التسجيل في إيجاري")+
+        "<div class='clause'>1. Original unified tenancy contract <span class='ar'>1. نسخة أصلية عن عقد الايجار الموحد</span></div>"+
+        "<div class='clause'>2. Original Emirates ID of applicant <span class='ar'>2. الهوية الإماراتية الأصلية لمقدم الطلب</span></div>";
+
+    } else {
+      var propRows = [["City", "المدينة", r.extra_fields.city], ["Community", "اسم المجمع", r.extra_fields.community],
+         ["Property Name/No.", "اسم/رقم العقار", r.extra_fields.propertyNo], ["No of BR", "عدد الغرف", r.extra_fields.bedrooms],
+         ["Property Type", "نوع العقار", r.extra_fields.propertyType], ["No. of Parking", "عدد مواقف السيارات", r.extra_fields.parkingCount]];
+
+      bodyHtml =
+        sectionHeader("Contract Details", "تفاصيل العقد")+
+        "<table>"+
+          row("Start Date","تاريخ البداية", r.contract_start)+
+          row("End Date","تاريخ النهاية", r.contract_end)+
+          row("Annual Rent (AED)","الإيجار السنوي", r.annual_rent)+
+          row("Security Deposit (AED)","مبلغ التأمين", r.security_deposit)+
+          row("Payment Terms","طريقة السداد", r.payment_terms)+
+        "</table>"+
+        sectionHeader("Property Details", "تفاصيل العقار")+
+        "<table>"+ propRows.map(function(pr){ return row(pr[0], pr[1], pr[2]); }).join("") +"</table>"+
+        sectionHeader("Lessor / Landlord Details", "تفاصيل المؤجر")+
+        "<table>"+
+          row("Full Name","الاسم بالكامل", r.landlord_name)+
+          row("ID / License No.","رقم الهوية", r.landlord_id_number)+
+        "</table>"+
+        sectionHeader("Tenant Details", "تفاصيل المستأجر")+
+        "<table>"+
+          row("Full Name","الاسم بالكامل", r.tenant_name)+
+          row("Emirates ID No.","رقم الهوية الإماراتية", r.tenant_id_number)+
+        "</table>"+
+        sectionHeader("General Terms and Conditions", "الأحكام والشروط العامة")+
+        terms.en.map(function(clause, i){
+          return "<div class='clause'>"+(i+1)+". "+esc(clause)+(terms.ar?"<span class='ar'>"+(i+1)+". "+esc(terms.ar[i])+"</span>":"")+"</div>";
+        }).join("")+
+        (additionalClausesHtml(r)) +
+        "<div class='sig'><div>Tenant Signature — توقيع المستأجر</div><div>Lessor Signature — توقيع المؤجر</div></div>";
     }
 
     var html = "<html><head><meta charset='UTF-8'><title>"+title+"</title><style>"+
@@ -383,32 +476,7 @@
       "</style></head><body>"+
       "<h1>"+title+"<span class='ar'>"+titleAr+"</span></h1>"+
       (r.is_renewal ? "<div class='renewalNote'>This is a <b>renewal</b> of a previous tenancy contract between the same parties.</div>" : "") +
-      sectionHeader("Contract Details", "تفاصيل العقد")+
-      "<table>"+
-        row("Start Date","تاريخ البداية", r.contract_start)+
-        row("End Date","تاريخ النهاية", r.contract_end)+
-        row("Annual Rent (AED)","الإيجار السنوي", r.annual_rent)+
-        row("Security Deposit (AED)","مبلغ التأمين", r.security_deposit)+
-        row("Payment Terms","طريقة السداد", r.payment_terms)+
-      "</table>"+
-      sectionHeader("Property Details", "تفاصيل العقار")+
-      "<table>"+ propRows.map(function(pr){ return row(pr[0], pr[1], pr[2]); }).join("") +"</table>"+
-      sectionHeader("Lessor / Landlord Details", "تفاصيل المؤجر")+
-      "<table>"+
-        row("Full Name","الاسم بالكامل", r.landlord_name)+
-        row("ID / License No.","رقم الهوية", r.landlord_id_number)+
-      "</table>"+
-      sectionHeader("Tenant Details", "تفاصيل المستأجر")+
-      "<table>"+
-        row("Full Name","الاسم بالكامل", r.tenant_name)+
-        row("Emirates ID No.","رقم الهوية الإماراتية", r.tenant_id_number)+
-      "</table>"+
-      sectionHeader("General Terms and Conditions", "الأحكام والشروط العامة")+
-      terms.en.map(function(clause, i){
-        return "<div class='clause'>"+(i+1)+". "+esc(clause)+(terms.ar?"<span class='ar'>"+(i+1)+". "+esc(terms.ar[i])+"</span>":"")+"</div>";
-      }).join("")+
-      (additionalClausesHtml(r)) +
-      "<div class='sig'><div>Tenant Signature — توقيع المستأجر</div><div>Lessor Signature — توقيع المؤجر</div></div>"+
+      bodyHtml+
       "<div class='disc'>Educational template only — not legal advice. Verify current requirements with Dubai Land Department / Abu Dhabi Municipality before use.</div>"+
       "</body></html>";
 

@@ -39,8 +39,7 @@
   .hCard.good .hVal{color:#7FD6C9}
   .hCard.bad .hVal{color:#F0A87A}
 
-  .resGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:14px}
-  @media(max-width:760px){.resGrid{grid-template-columns:1fr}}
+  .resGrid{display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:14px;align-items:start;margin-bottom:14px}
   .sumCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
   .sumCard h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px}
   .sLine{display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--line);color:var(--grey)}
@@ -52,7 +51,8 @@
   .insightBox b{color:var(--navy)}
 
   .chartWrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
-  .chartWrap h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px}
+  .chartWrap h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px;
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
   #cfChartRental{width:100%;height:200px;display:block}
   .granBtnFs{background:transparent;border:1px solid var(--line);color:var(--grey);font:inherit;font-size:10.5px;font-weight:700;
     padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:5px}
@@ -177,7 +177,10 @@
     '<div class="collapsible-body" id="fBody1"><div class="fGrid">'+
       '<div class="fld"><label>Purchase price (AED)</label><input type="number" id="f_price" value="1500000"></div>'+
       '<div class="fld"><label>Size (sqft)</label><input type="number" id="f_size" value="900"></div>'+
-      '<div class="fld"><label>Renovation cost (AED)</label><input type="number" id="f_renovationCost" value="150000"></div>'+
+      '<div class="fld"><label>Permitting (AED)</label><input type="number" id="f_permittingCost" value="15000"></div>'+
+      '<div class="fld"><label>Design (AED)</label><input type="number" id="f_designCost" value="25000"></div>'+
+      '<div class="fld"><label>Construction (AED)</label><input type="number" id="f_constructionCost" value="95000"></div>'+
+      '<div class="fld"><label>Supervision (AED)</label><input type="number" id="f_supervisionCost" value="15000"></div>'+
       '<div class="fld"><label>Construction (months)</label><input type="number" id="f_constructionMonths" value="4"></div>'+
       '<div class="fld"><label>Post-renovation value (AED)</label><input type="number" id="f_postRenoValue" value="1800000"></div>'+
       '<div class="fld"><label>Hold after renovation (months)</label><input type="number" id="f_holdAfterRenoMonths" value="2"></div>'+
@@ -214,6 +217,8 @@
     '<div class="secCard"><div class="collapsible-head collapsed" id="fHead5"><h2>Exit Assumptions</h2><span class="chevron">▾</span></div>'+
     '<div class="collapsible-body collapsed" id="fBody5"><div class="fGrid">'+
       '<div class="fld"><label>Sell agent commission (%)</label><input type="number" id="f_sellAgentPct" value="2"></div>'+
+      '<div class="fld"><label>Early settlement (%)</label><input type="number" id="f_earlySettlePct" value="1"></div>'+
+      '<div class="fld"><label>Early settlement cap (AED)</label><input type="number" id="f_earlySettleCap" value="10000"></div>'+
     '</div></div></div>'+
 
     '<button class="runBtn" id="runFlip">Run Feasibility Study</button>'+
@@ -452,7 +457,7 @@
             '<div class="sLine"><span>Appreciation</span><span class="v">+'+AED(d.profitSummary.appreciation)+'</span></div>'+
           '</div>'+
         '</div>'+
-        '<div class="chartWrap"><h3>Cash Flow <span style="float:right"><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartRental"></canvas></div>'+
+        '<div class="chartWrap"><h3><span>Cash Flow</span><span><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartRental"></canvas></div>'+
         '<div class="tableWrap"><div class="tableHead"><h3>Cash Flow Detail</h3><div class="exportBtns">'+
           '<button class="exportBtn" id="exportExcelBtn">Export Excel</button>'+
           '<button class="exportBtn" id="exportPdfBtn">Export PDF</button>'+
@@ -494,12 +499,15 @@
       var body = {
         price:+$("f_price").value, size:+$("f_size").value, fund:$("f_fund").value,
         dpPct:+$("f_dpPct").value, rate:+$("f_rate").value,
-        renovationCost:+$("f_renovationCost").value, constructionMonths:+$("f_constructionMonths").value,
+        permittingCost:+$("f_permittingCost").value, designCost:+$("f_designCost").value,
+        constructionCost:+$("f_constructionCost").value, supervisionCost:+$("f_supervisionCost").value,
+        constructionMonths:+$("f_constructionMonths").value,
         postRenoValue:+$("f_postRenoValue").value, holdAfterRenoMonths:+$("f_holdAfterRenoMonths").value,
         dldPct:+$("f_dldPct").value, dldAdmin:+$("f_dldAdmin").value, titleDeed:+$("f_titleDeed").value, agentPct:+$("f_agentPct").value,
         trustee:+$("f_trustee").value, conveyance:+$("f_conveyance").value, valuation:+$("f_valuation").value,
         mortFeePct:+$("f_mortFeePct").value, mortRegPct:+$("f_mortRegPct").value, noc:+$("f_noc").value, dewa:+$("f_dewa").value,
-        scPsf:+$("f_scPsf").value, insurePct:+$("f_insurePct").value, sellAgentPct:+$("f_sellAgentPct").value
+        scPsf:+$("f_scPsf").value, insurePct:+$("f_insurePct").value, sellAgentPct:+$("f_sellAgentPct").value,
+        earlySettlePct:+$("f_earlySettlePct").value, earlySettleCap:+$("f_earlySettleCap").value
       };
       try {
         var headers = await authedHeaders();
@@ -527,6 +535,7 @@
             '<div class="sLine"><span>Upfront costs</span><span class="v">'+AED(d.cashSummary.upfront)+'</span></div>'+
             '<div class="sLine"><span>Renovation cost</span><span class="v">'+AED(d.cashSummary.renovationCost)+'</span></div>'+
             '<div class="sLine"><span>Total carrying costs</span><span class="v">'+AED(d.cashSummary.totalCarryingCosts)+'</span></div>'+
+            '<div class="sLine"><span>Loan settlement on exit</span><span class="v">'+AED(d.cashSummary.earlySettlement)+'</span></div>'+
             '<div class="sLine"><span>Net sale proceeds</span><span class="v">'+AED(d.cashSummary.netSaleProceeds)+'</span></div>'+
           '</div>'+
           '<div class="sumCard"><h3>Profit Summary</h3>'+
@@ -535,10 +544,17 @@
             '<div class="sLine"><span>Renovation cost</span><span class="v">-'+AED(d.profitSummary.renovationCost)+'</span></div>'+
             '<div class="sLine"><span>Upfront costs</span><span class="v">-'+AED(d.profitSummary.upfront)+'</span></div>'+
             '<div class="sLine"><span>Interest + charges</span><span class="v">-'+AED(d.profitSummary.totalInterest + d.profitSummary.totalServiceCharge + d.profitSummary.totalInsurance)+'</span></div>'+
-            '<div class="sLine"><span>Exit costs</span><span class="v">-'+AED(d.profitSummary.exitCosts)+'</span></div>'+
+            '<div class="sLine"><span>Exit costs (agent + loan settlement)</span><span class="v">-'+AED(d.profitSummary.exitCosts)+'</span></div>'+
+          '</div>'+
+          '<div class="sumCard"><h3>Renovation Breakdown</h3>'+
+            '<div class="sLine"><span>Permitting</span><span class="v">'+AED(d.renovationBreakdown.permittingCost)+'</span></div>'+
+            '<div class="sLine"><span>Design</span><span class="v">'+AED(d.renovationBreakdown.designCost)+'</span></div>'+
+            '<div class="sLine"><span>Construction</span><span class="v">'+AED(d.renovationBreakdown.constructionCost)+'</span></div>'+
+            '<div class="sLine"><span>Supervision</span><span class="v">'+AED(d.renovationBreakdown.supervisionCost)+'</span></div>'+
+            '<div class="sLine"><span><b>Total</b></span><span class="v"><b>'+AED(d.renovationBreakdown.total)+'</b></span></div>'+
           '</div>'+
         '</div>'+
-        '<div class="chartWrap"><h3>Cash Flow <span style="float:right"><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartFlip"></canvas></div>'+
+        '<div class="chartWrap"><h3><span>Cash Flow</span><span><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartFlip"></canvas></div>'+
         '<div class="tableWrap"><div class="tableHead"><h3>Cash Flow Detail</h3><div class="exportBtns">'+
           '<button class="exportBtn" id="exportExcelBtnFlip">Export Excel</button>'+
           '<button class="exportBtn" id="exportPdfBtnFlip">Export PDF</button>'+

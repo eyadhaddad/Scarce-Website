@@ -81,6 +81,11 @@
       <span class="legItem"><i style="background:#7A5FBF"></i>Off-plan</span>
       <span class="legItem"><i class="legLine" style="background:#C9952B"></i>Cumulative (from today, right axis)</span>
     </div>
+
+    <div class="collapsible-head" id="cfTableHead"><h2>Cash flow detail</h2><span class="chevron"></span></div>
+    <div class="collapsible-body" id="cfTableBody2">
+      <table class="scheduleTable" id="cfDataTable"><thead><tr><th>Period</th><th>Rent in</th><th>Mortgage</th><th>Service charge</th><th>Off-plan</th><th>Net</th><th>Cumulative</th></tr></thead><tbody id="cfDataTableBody"></tbody></table>
+    </div>
   </div>
 
   <div class="card addCard">
@@ -435,8 +440,12 @@
       $("cfNet").textContent = AEDsigned(t.net);
 
       drawCashflowChart(data.timeline);
+      renderCashflowDataTable(data.timeline);
     } catch(e){ console.error("Cashflow load failed:", e); }
   }
+
+  // ---- Cash flow detail table (collapsed by default) ----
+  makeCollapsible($("cfTableHead"), $("cfTableBody2"), true);
 
   // ---- Granularity toggle ----
   W.querySelectorAll(".granBtn").forEach(function(btn){
@@ -591,6 +600,22 @@
       var cx3 = padL + gap * k + gap / 2;
       ctx.fillText(String(data[k].month), cx3, cssH - 7);
     }
+  }
+
+  function renderCashflowDataTable(data){
+    var body = $("cfDataTableBody");
+    if(!body) return;
+    var cum = 0;
+    body.innerHTML = data.map(function(d){
+      cum += d.net;
+      return "<tr><td>" + d.month + "</td>" +
+        "<td>" + AED(d.rentIn||0) + "</td>" +
+        "<td>-" + AED(d.mortgageOut||0) + "</td>" +
+        "<td>-" + AED(d.serviceChargeOut||0) + "</td>" +
+        "<td>-" + AED(d.offplanOut||0) + "</td>" +
+        "<td>" + AEDsigned(d.net) + "</td>" +
+        "<td>" + AEDsigned(cum) + "</td></tr>";
+    }).join("");
   }
 
   function AEDk(n){ return n>=1e6||n<=-1e6 ? (n/1e6).toFixed(1)+"M" : Math.round(n).toLocaleString("en-AE"); }

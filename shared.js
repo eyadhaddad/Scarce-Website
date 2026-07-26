@@ -39,8 +39,20 @@ function animateNumber(el, newValue, formatFn, duration) {
  * Wires up a collapsible section. Pass the header element (the
  * clickable row) and the body element (the content that shows/hides).
  * Call once per section on page load.
+ *
+ * Manages a plus/minus indicator inside headEl (an element with class
+ * "chevron") — replaces the old small rotating triangle character,
+ * which was too subtle to read as an actual toggle control. Shows
+ * "+" when collapsed, "−" when expanded.
  */
 function makeCollapsible(headEl, bodyEl, startCollapsed) {
+  var indicator = headEl.querySelector(".chevron");
+
+  function setIndicator(collapsed) {
+    if (indicator) indicator.textContent = collapsed ? "+" : "−";
+  }
+
+  setIndicator(!!startCollapsed);
   if (startCollapsed) {
     headEl.classList.add("collapsed");
     bodyEl.classList.add("collapsed");
@@ -48,6 +60,7 @@ function makeCollapsible(headEl, bodyEl, startCollapsed) {
   headEl.addEventListener("click", function () {
     headEl.classList.toggle("collapsed");
     bodyEl.classList.toggle("collapsed");
+    setIndicator(headEl.classList.contains("collapsed"));
   });
 }
 

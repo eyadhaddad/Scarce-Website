@@ -438,10 +438,11 @@
           '<div class="hCard"><div class="hLbl">ROI</div><div class="hVal">'+d.headline.roi.toFixed(1)+'%</div></div>'+
           '<div class="hCard"><div class="hLbl">Annualized Return</div><div class="hVal">'+d.headline.annualizedReturn.toFixed(1)+'%</div></div>'+
           '<div class="hCard"><div class="hLbl">Net Yield (Yr 1)</div><div class="hVal">'+d.headline.netYield.toFixed(1)+'%</div></div>'+
-        '</div>'+
-        '<div class="resGrid">'+
+        '</div>';
+        var downLabelHold = $("h_fund").value === "cash" ? "Purchase price (cash)" : "Down payment";
+        html += '<div class="resGrid">'+
           '<div class="sumCard"><h3>Cash Summary</h3>'+
-            '<div class="sLine"><span>Down payment</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
+            '<div class="sLine"><span>'+downLabelHold+'</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
             '<div class="sLine"><span>Upfront costs</span><span class="v">'+AED(d.cashSummary.upfront)+'</span></div>'+
             '<div class="sLine"><span>Total rent collected</span><span class="v">'+AED(d.cashSummary.totRent)+'</span></div>'+
             '<div class="sLine"><span>Total operating costs</span><span class="v">'+AED(d.cashSummary.totOpex)+'</span></div>'+
@@ -529,9 +530,10 @@
           html += '<div class="insightBox"><b>Value uplift is ' + d.insights.upliftVsRenoCostRatio.toFixed(2) + '× the renovation cost.</b> Every AED spent on renovation is adding ' + d.insights.upliftVsRenoCostRatio.toFixed(2) + ' AED of value, before financing and exit costs.</div>';
         }
 
+        var downLabelFlip = $("f_fund").value === "cash" ? "Purchase price (cash)" : "Down payment";
         html += '<div class="resGrid">'+
           '<div class="sumCard"><h3>Cash Summary</h3>'+
-            '<div class="sLine"><span>Down payment</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
+            '<div class="sLine"><span>'+downLabelFlip+'</span><span class="v">'+AED(d.cashSummary.down)+'</span></div>'+
             '<div class="sLine"><span>Upfront costs</span><span class="v">'+AED(d.cashSummary.upfront)+'</span></div>'+
             '<div class="sLine"><span>Renovation cost</span><span class="v">'+AED(d.cashSummary.renovationCost)+'</span></div>'+
             '<div class="sLine"><span>Total carrying costs</span><span class="v">'+AED(d.cashSummary.totalCarryingCosts)+'</span></div>'+

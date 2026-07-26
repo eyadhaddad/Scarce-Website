@@ -84,9 +84,9 @@
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   window.supabaseClient = sb; // other pages (mortgage calc, portfolio tracker, etc.) reuse this global
 
-  // Where to send someone after a successful sign in / sign up.
-  // Update this once the mortgage calculator page exists.
-  var REDIRECT_TO = "mortgage-calculator.html";
+  // Where to send someone after a successful sign in / sign up, or if
+  // they land on this page while already logged in.
+  var REDIRECT_TO = "index.html";
 
   function $(id){ return document.getElementById(id); }
 

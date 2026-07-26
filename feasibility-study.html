@@ -83,6 +83,7 @@
   var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   window.supabaseClient = sb;
+  initAuthTopbar(sb);
 
   var $ = function(id){ return document.getElementById(id); };
   var AED = function(n){ return "AED " + Math.round(n).toLocaleString("en-AE"); };

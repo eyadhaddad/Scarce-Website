@@ -52,6 +52,30 @@ function makeCollapsible(headEl, bodyEl, startCollapsed) {
 }
 
 /**
+ * Makes the topbar's auth link reflect real session state. Call this
+ * once on every page, right after creating the Supabase client, e.g.:
+ *   initAuthTopbar(sb);
+ *
+ * If logged in: turns the "Sign in" link into a working "Sign out"
+ * button. If not logged in: leaves it as "Sign in" pointing at
+ * auth.html, unchanged.
+ */
+async function initAuthTopbar(supabaseClient) {
+  var link = document.querySelector(".topbar .signin");
+  if (!link) return;
+  var session = (await supabaseClient.auth.getSession()).data.session;
+  if (session) {
+    link.textContent = "Sign out";
+    link.href = "#";
+    link.addEventListener("click", async function (e) {
+      e.preventDefault();
+      await supabaseClient.auth.signOut();
+      window.location.href = "index.html";
+    });
+  }
+}
+
+/**
  * Injects the shared abstract skyline background into the page.
  * Call once, near the top of <body>. The shapes are simple
  * rectangles (towers) and rect+triangle silhouettes (villas) in a

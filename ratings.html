@@ -50,6 +50,7 @@
   var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   window.supabaseClient = sb;
+  initAuthTopbar(sb);
 
   var hexA = function(h, a){ var n = parseInt(h.slice(1), 16); return "rgba(" + (n>>16&255) + "," + (n>>8&255) + "," + (n&255) + "," + a + ")"; };
 

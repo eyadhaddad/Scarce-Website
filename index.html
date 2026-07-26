@@ -103,7 +103,16 @@
     <p class="foot">Educational only. Not financial advice — a sharper way to think for yourself.</p>
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="shared.js"></script>
-<script>injectSkylineBackground();</script>
+<script>
+  injectSkylineBackground();
+  var sb = supabase.createClient(
+    "https://qlngrgkzpiyouaewuzhk.supabase.co",
+    "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv"
+  );
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+</script>
 </body>
 </html>

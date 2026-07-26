@@ -362,65 +362,74 @@
 
     if(isDubai){
       var ef = r.extra_fields || {};
-      bodyHtml =
-        sectionHeader("Date", "التاريخ")+
-        "<table>"+ row("Date","التاريخ", new Date().toISOString().slice(0,10)) +"</table>"+
+      function dline(en, ar, val){
+        return "<div class='dfield'><span class='dlbl'>"+en+"</span><span class='dval'>"+esc(val||"")+"</span><span class='dlblAr'>"+ar+"</span></div>";
+      }
+      function dline2(en1, ar1, val1, en2, ar2, val2){
+        return "<div class='dfieldRow'>"+
+          "<div class='dfieldHalf'><span class='dlbl'>"+en1+"</span><span class='dval'>"+esc(val1||"")+"</span><span class='dlblAr'>"+ar1+"</span></div>"+
+          "<div class='dfieldHalf'><span class='dlbl'>"+en2+"</span><span class='dval'>"+esc(val2||"")+"</span><span class='dlblAr'>"+ar2+"</span></div>"+
+        "</div>";
+      }
 
-        sectionHeader("Owner / Lessor Information", "معلومات المالك / المؤجر")+
-        "<table>"+
-          row("Owner's Name","اسم المالك", ef.ownerName || r.landlord_name)+
-          row("Lessor's Name","اسم المؤجر", r.landlord_name)+
-          row("Lessor's Emirates ID","الهوية الإماراتية للمؤجر", r.landlord_id_number)+
-          row("License No. (if a company)","رقم الرخصة في حال كانت شركة", ef.licenseNo)+
-          row("Licensing Authority (if a company)","سلطة الترخيص في حال كانت شركة", ef.licensingAuthority)+
-          row("Lessor's Email","البريد الإلكتروني للمؤجر", ef.landlordEmail)+
-          row("Lessor's Phone","رقم هاتف المؤجر", r.landlord_contact)+
-        "</table>"+
+      bodyHtml =
+        "<div class='dateRow'><span>Date</span><span class='dval'>"+new Date().toISOString().slice(0,10)+"</span><span class='ar'>التاريخ</span></div>"+
+
+        sectionHeader("Owner / Lessor Information", "معلومات المالك/ المؤجر")+
+        dline("Owner's Name","اسم المالك", ef.ownerName || r.landlord_name)+
+        dline("Lessor's Name","اسم المؤجر", r.landlord_name)+
+        dline("Lessor's Emirates ID","الهوية الإماراتية للمؤجر", r.landlord_id_number)+
+        dline2("License No.","رقم الرخصة", ef.licenseNo, "Licensing Authority","سلطة الترخيص", ef.licensingAuthority)+
+        "<div class='dhint'>Incase of a Company — في حال كانت شركة</div>"+
+        dline("Lessor's Email","البريد الإلكتروني للمؤجر", ef.landlordEmail)+
+        dline("Lessor's Phone","رقم هاتف المؤجر", r.landlord_contact)+
 
         sectionHeader("Tenant Information", "معلومات المستأجر")+
-        "<table>"+
-          row("Tenant's Name","اسم المستأجر", r.tenant_name)+
-          row("Tenant's Emirates ID","الهوية الإماراتية للمستأجر", r.tenant_id_number)+
-          row("Tenant's Email","البريد الإلكتروني للمستأجر", ef.tenantEmail)+
-          row("Tenant's Phone","رقم هاتف المستأجر", r.tenant_contact)+
-        "</table>"+
+        dline("Tenant's Name","اسم المستأجر", r.tenant_name)+
+        dline("Tenant's Emirates ID","الهوية الإماراتية للمستأجر", r.tenant_id_number)+
+        dline("Tenant's Email","البريد الإلكتروني للمستأجر", ef.tenantEmail)+
+        dline("Tenant's Phone","رقم هاتف المستأجر", r.tenant_contact)+
 
         sectionHeader("Property Information", "معلومات العقار")+
-        "<table>"+
-          row("Plot No.","رقم الأرض", ef.plotNo)+
-          row("Makani No.","رقم مكاني", ef.makaniNo)+
-          row("Location","الموقع", ef.location)+
-          row("Building Name","اسم المبنى", ef.buildingName)+
-          row("Property Type","نوع الوحدة", ef.propertyType)+
-          row("Property No.","رقم العقار", ef.propertyNo)+
-          row("Property Area (sqm)","مساحة العقار", ef.areaSqm)+
-          row("Premises No. (DEWA)","رقم المبنى (ديوا)", ef.premisesNo)+
-          row("Property Usage","استخدام العقار", ef.propertyUsage)+
-        "</table>"+
+        dline("Property Usage","استخدام العقار", ef.propertyUsage)+
+        dline2("Plot No.","رقم الأرض", ef.plotNo, "Makani No.","رقم مكاني", ef.makaniNo)+
+        dline2("Building Name","اسم المبنى", ef.buildingName, "Property No.","رقم العقار", ef.propertyNo)+
+        dline2("Property Type","نوع الوحدة", ef.propertyType, "Property Area (s.m)","مساحة العقار", ef.areaSqm)+
+        dline2("Location","الموقع", ef.location, "Premises No. (DEWA)","رقم المبنى (ديوا)", ef.premisesNo)+
 
         sectionHeader("Contract Information", "معلومات العقد")+
-        "<table>"+
-          row("Contract Period — From","فترة العقد - من", r.contract_start)+
-          row("Contract Period — To","فترة العقد - إلى", r.contract_end)+
-          row("Annual Rent (AED)","الايجار السنوي", r.annual_rent)+
-          row("Security Deposit Amount (AED)","مبلغ التأمين", r.security_deposit)+
-          row("Mode of Payment","طريقة الدفع", r.payment_terms)+
-        "</table>"+
+        dline2("Contract Period (From — To)","فترة العقد (من - إلى)", r.contract_start+" — "+r.contract_end, "Contract Value","قيمة العقد", r.annual_rent)+
+        dline2("Annual Rent (AED)","الايجار السنوي", r.annual_rent, "Security Deposit Amount (AED)","مبلغ التأمين", r.security_deposit)+
+        dline("Mode of Payment","طريقة الدفع", r.payment_terms)+
 
         sectionHeader("General Terms and Conditions", "الأحكام والشروط")+
+        "<div class='termsGrid'>"+
         terms.en.map(function(clause, i){
-          return "<div class='clause'>"+(i+1)+". "+esc(clause)+(terms.ar?"<span class='ar'>"+(i+1)+". "+esc(terms.ar[i])+"</span>":"")+"</div>";
+          return "<div class='termEn'>"+(i+1)+". "+esc(clause)+"</div>"+
+                 "<div class='termAr'>"+(i+1)+". "+esc(terms.ar[i])+"</div>";
         }).join("")+
+        "</div>"+
         (additionalClausesHtml(r)) +
         "<div class='sig'><div>Tenant Signature — توقيع المستأجر</div><div>Lessor Signature — توقيع المؤجر</div></div>"+
 
         sectionHeader("Know your Rights", "لمعرفة حقوقكم")+
-        "<div class='clause'>You may visit the Rental Dispute Center website through www.dubailand.gov.ae in case of any rental dispute between parties. This contract is subject to Law No. 26 of 2007 regulating the relationship between landlords and tenants, Law No. 33 of 2008 amending Law No. 26 of 2007, and Law No. 43 of 2013 determining rent increases for properties."+
-        "<span class='ar'>يمكنكم زيارة موقع مركز فض المنازعات الإيجارية من خلال www.dubailand.gov.ae في حال نشوء أي نزاع إيجاري بين الأطراف. يخضع هذا العقد للقانون رقم 26 لسنة 2007 بشأن تنظيم العلاقة بين المؤجرين والمستأجرين، والقانون رقم 33 لسنة 2008 المعدل له، والقانون رقم 43 لسنة 2013 بشأن تحديد زيادة بدل الإيجار.</span></div>"+
+        "<div class='bulletGrid'>"+
+          "<div class='bulletEn'>• You may visit Rental Dispute Center website through www.dubailand.gov.ae in case of any rental dispute between parties.</div>"+
+          "<div class='bulletAr'>يمكنكم زيارة موقع مركز فض المنازعات الإيجارية من خلال www.dubailand.gov.ae في حال نشوء أي نزاع إيجاري بين الأطراف •</div>"+
+          "<div class='bulletEn'>• Law No 26 of 2007 regulating relationship between landlords and tenants.</div>"+
+          "<div class='bulletAr'>الإطلاع على قانون رقم 26 لسنة 2007 بشأن تنظيم العلاقة بين المؤجرين والمستأجرين •</div>"+
+          "<div class='bulletEn'>• Law No 33 of 2008 amending law 26 of year 2007.</div>"+
+          "<div class='bulletAr'>الإطلاع على قانون رقم 33 لسنة 2008 الخاص بتعديل بعض أحكام قانون 26 لعام 2007 •</div>"+
+          "<div class='bulletEn'>• Law No 43 of 2013 determining rent increases for properties.</div>"+
+          "<div class='bulletAr'>الإطلاع على قانون رقم 43 لسنة 2013 بشأن تحديد زيادة بدل الإيجار •</div>"+
+        "</div>"+
 
         sectionHeader("Attachments for Ejari Registration", "مرفقات التسجيل في إيجاري")+
-        "<div class='clause'>1. Original unified tenancy contract <span class='ar'>1. نسخة أصلية عن عقد الايجار الموحد</span></div>"+
-        "<div class='clause'>2. Original Emirates ID of applicant <span class='ar'>2. الهوية الإماراتية الأصلية لمقدم الطلب</span></div>";
+        "<div class='termsGrid'>"+
+          "<div class='termEn'>1. Original unified tenancy contract</div><div class='termAr'>نسخة أصلية عن عقد الايجار الموحد .1</div>"+
+          "<div class='termEn'>2. Original Emirates ID of applicant</div><div class='termAr'>الهوية الإماراتية الأصلية لمقدم الطلب .2</div>"+
+        "</div>"+
+        "<div class='govFooter'>For official Ejari registration, contact Dubai Land Department — Tel: 8004488 · Website: www.dubailand.gov.ae · Email: support@dubailand.gov.ae</div>";
 
     } else {
       var propRows = [["City", "المدينة", r.extra_fields.city], ["Community", "اسم المجمع", r.extra_fields.community],
@@ -457,24 +466,47 @@
     }
 
     var html = "<html><head><meta charset='UTF-8'><title>"+title+"</title><style>"+
-      "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:30px;color:#14181C;max-width:900px;margin:0 auto}"+
-      "h1{font-size:22px;text-align:center;margin-bottom:2px}"+
-      "h1 .ar{display:block;font-size:16px;font-weight:400;margin-top:4px;direction:rtl}"+
-      ".renewalNote{background:#FDF3EA;border-left:3px solid #D9772F;padding:8px 12px;font-size:12px;margin:12px 0}"+
-      "table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px}"+
-      "table.section-title td{background:#14181C;color:#fff;font-weight:700;padding:6px 10px}"+
+      "body{font-family:'Times New Roman',Georgia,serif;padding:30px;color:#14181C;max-width:900px;margin:0 auto}"+
+      ".draftHeader{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1B2A4A;padding-bottom:10px;margin-bottom:6px;font-family:-apple-system,Helvetica,Arial,sans-serif}"+
+      ".draftHeader .brand{font-weight:800;letter-spacing:.06em;color:#1B2A4A;font-size:16px}"+
+      ".draftHeader .draftNote{font-size:10.5px;color:#B45309;font-weight:700;background:#FEF3E2;padding:4px 10px;border-radius:5px}"+
+      "h1{font-size:22px;text-align:center;margin:14px 0 2px}"+
+      "h1 .ar{display:block;font-size:20px;font-weight:700;margin-bottom:4px;direction:rtl}"+
+      ".dateRow{background:#F4F1EB;padding:8px 14px;display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:10px;border-radius:4px}"+
+      ".renewalNote{background:#FDF3EA;border-left:3px solid #D9772F;padding:8px 12px;font-size:12px;margin:12px 0;font-family:-apple-system,Helvetica,Arial,sans-serif}"+
+      "table{width:100%;border-collapse:collapse;margin:10px 0 6px;font-size:12.5px}"+
+      "table.section-title td{background:#1B2A4A;color:#fff;font-weight:700;padding:7px 12px;font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12.5px}"+
       "table.section-title td.ar{text-align:right;direction:rtl}"+
       "td{border:1px solid #ddd;padding:6px 10px}"+
       "td.lbl{background:#f4f1eb;font-weight:700;width:28%}"+
       "td.lbl.ar{text-align:right;direction:rtl}"+
+      // Dotted-line field style — matches the real Ejari form (fill-in
+      // lines), not bordered table cells
+      ".dfield{display:flex;align-items:baseline;gap:8px;padding:5px 4px;font-size:12px;border-bottom:1px dotted transparent}"+
+      ".dfieldRow{display:flex;gap:24px;padding:5px 4px}"+
+      ".dfieldHalf{flex:1;display:flex;align-items:baseline;gap:8px;font-size:12px}"+
+      ".dlbl{font-weight:700;white-space:nowrap}"+
+      ".dval{flex:1;border-bottom:1px dotted #999;min-height:14px;padding:0 4px}"+
+      ".dlblAr{font-weight:700;direction:rtl;white-space:nowrap}"+
+      ".dhint{font-size:10px;color:#888;text-align:right;direction:rtl;margin:-4px 4px 4px;font-style:italic}"+
+      // Two-column English/Arabic layout for terms, rights, attachments —
+      // matches the real form's side-by-side bilingual columns
+      ".termsGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin-bottom:10px}"+
+      ".termEn{font-size:11px;line-height:1.5}"+
+      ".termAr{font-size:11px;line-height:1.5;direction:rtl;text-align:right}"+
+      ".bulletGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:10px}"+
+      ".bulletEn{font-size:11.5px;line-height:1.5}"+
+      ".bulletAr{font-size:11.5px;line-height:1.5;direction:rtl;text-align:right}"+
+      ".govFooter{font-size:10px;color:#888;text-align:center;margin-top:10px;font-family:-apple-system,Helvetica,Arial,sans-serif}"+
       ".clause{margin-bottom:10px;font-size:11.5px;line-height:1.5}"+
       ".clause .ar{direction:rtl;text-align:right;color:#333;margin-top:2px;display:block}"+
-      ".sig{display:flex;justify-content:space-between;margin-top:40px;font-size:12px}"+
+      ".sig{display:flex;justify-content:space-between;margin-top:30px;margin-bottom:20px;font-size:12px}"+
       ".sig div{width:45%;border-top:1px solid #999;padding-top:6px;text-align:center}"+
-      ".disc{font-size:10.5px;color:#888;font-style:italic;margin-top:20px;text-align:center}"+
+      ".disc{font-size:10.5px;color:#888;font-style:italic;margin-top:20px;text-align:center;font-family:-apple-system,Helvetica,Arial,sans-serif}"+
       "@media print{body{padding:10px}}"+
       "</style></head><body>"+
-      "<h1>"+title+"<span class='ar'>"+titleAr+"</span></h1>"+
+      "<div class='draftHeader'><span class='brand'>SCARCE</span><span class='draftNote'>DRAFT — generated as a starting point, not an official Ejari/Tawtheeq-registered document</span></div>"+
+      "<h1><span class='ar'>"+titleAr+"</span>"+title+"</h1>"+
       (r.is_renewal ? "<div class='renewalNote'>This is a <b>renewal</b> of a previous tenancy contract between the same parties.</div>" : "") +
       bodyHtml+
       "<div class='disc'>Educational template only — not legal advice. Verify current requirements with Dubai Land Department / Abu Dhabi Municipality before use.</div>"+

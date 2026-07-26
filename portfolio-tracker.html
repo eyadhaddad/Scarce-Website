@@ -68,6 +68,7 @@
     <h2>Add a property</h2>
     <div class="addGrid">
       <div class="fld"><label>Community</label><input type="text" id="newCommunity" placeholder="e.g. Dubai Hills Estate"></div>
+      <div class="fld"><label>Building</label><input type="text" id="newBuilding" placeholder="e.g. Golf Terrace 3"></div>
       <div class="fld"><label>Label (optional)</label><input type="text" id="newLabel" placeholder="e.g. Unit 1204"></div>
       <div class="fld"><label>Group (optional)</label><input type="text" id="newGroup" placeholder="e.g. Dubai properties"></div>
       <div class="fld"><label>Status</label>
@@ -113,12 +114,43 @@
   <div class="listWrap" id="listWrap">
     <p class="empty" id="emptyMsg">No properties yet — add your first one above.</p>
     <table class="pTable" id="pTable" style="display:none">
-      <thead><tr><th>Community</th><th>Label</th><th>Group</th><th>Status</th><th>Purchase price</th><th>Date</th><th>Size</th><th>Client</th><th>Market value</th><th></th></tr></thead>
+      <thead><tr><th>Community</th><th>Building</th><th>Label</th><th>Group</th><th>Status</th><th>Purchase price</th><th>Date</th><th>Size</th><th>Client</th><th>Market value</th><th>Mortgage</th><th>Rental</th><th></th></tr></thead>
       <tbody id="pTableBody"></tbody>
     </table>
   </div>
 
   <div class="disc">Market value shows "coming soon" until live valuation data is connected. Figures here reflect what you entered, not verified transaction data.</div>
+
+  <div class="card sidePanel" id="mortgagePanel" style="display:none">
+    <h2>Mortgage details</h2>
+    <div class="fieldsRow2">
+      <div class="fld"><label>Lender</label><input type="text" id="mLender" placeholder="e.g. Emirates NBD"></div>
+      <div class="fld"><label>Loan amount (AED)</label><input type="number" id="mLoanAmount"></div>
+      <div class="fld"><label>Monthly installment (AED)</label><input type="number" id="mMonthlyInstallment"></div>
+      <div class="fld"><label>Interest rate (%)</label><input type="number" id="mInterestRate" step="0.1"></div>
+      <div class="fld"><label>Start date</label><input type="date" id="mStartDate"></div>
+      <div class="fld"><label>Term (months)</label><input type="number" id="mTermMonths"></div>
+    </div>
+    <button class="addBtn" id="saveMortgageBtn">Save mortgage</button>
+    <button class="cancelBtn" id="cancelMortgageBtn">Cancel</button>
+    <div class="addErr" id="mortgageErr"></div>
+  </div>
+
+  <div class="card sidePanel" id="rentalPanel" style="display:none">
+    <h2>Rental contract</h2>
+    <div class="fieldsRow2">
+      <div class="fld"><label>Tenant name</label><input type="text" id="rTenantName"></div>
+      <div class="fld"><label>Tenant contact</label><input type="text" id="rTenantContact"></div>
+      <div class="fld"><label>Contract start</label><input type="date" id="rStart"></div>
+      <div class="fld"><label>Contract end</label><input type="date" id="rEnd"></div>
+      <div class="fld"><label>Annual rent (AED)</label><input type="number" id="rAnnualRent"></div>
+      <div class="fld"><label>Number of cheques</label><input type="number" id="rCheques" value="1" min="1"></div>
+    </div>
+    <button class="addBtn" id="saveRentalBtn">Save contract</button>
+    <button class="cancelBtn" id="cancelRentalBtn">Cancel</button>
+    <div class="addErr" id="rentalErr"></div>
+  </div>
+
 </div>
 <style>
 #scarce-portfolio{--navy:#14181C;--ink:#2A2F35;--teal:#0E9B96;--teal-deep:#0B7A76;--gold:#C9952B;--red:#C0392B;--green:#1F7A4D;--cream:#FAF8F4;--line:#ECE9E3;--grey:#7A7F87;--white:#fff;--mid:#F4F1EB;
@@ -167,6 +199,10 @@
 #scarce-portfolio .cfTip{position:absolute;pointer-events:none;background:#fff;color:var(--navy);font-size:11.5px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:5;transform:translate(-50%,-115%);box-shadow:0 4px 12px rgba(0,0,0,.2)}
 #scarce-portfolio .cfTip.on{opacity:1}
 #scarce-portfolio .cfChartNote{font-size:10.5px;color:#8B9299;margin-top:8px}
+#scarce-portfolio .miniLink{background:none;border:none;color:var(--teal-deep);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline}
+#scarce-portfolio .sidePanel{margin-top:16px}
+#scarce-portfolio .fieldsRow2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0}
+@media(max-width:700px){#scarce-portfolio .fieldsRow2{grid-template-columns:1fr 1fr}}
 #scarce-portfolio .addClientBtn{margin-top:6px;background:none;border:1px solid var(--teal);color:var(--teal-deep);font:inherit;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer}
 #scarce-portfolio .newClientForm{margin-top:12px;padding:12px;background:var(--mid);border-radius:8px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end}
 @media(max-width:640px){#scarce-portfolio .newClientForm{grid-template-columns:1fr}}
@@ -469,6 +505,9 @@
     $("offplanHint").style.display = this.value === "off_plan" ? "block" : "none";
   });
 
+  var mortgages = [];
+  var rentalContracts = [];
+
   async function loadProperties(){
     var user = (await sb.auth.getUser()).data.user;
     if(!user){ W.innerHTML = '<p style="color:#C0392B">Please sign in to view your portfolio.</p>'; return; }
@@ -480,9 +519,23 @@
 
     if(res.error){ console.error(res.error); return; }
     rows = res.data;
+
+    var mRes = await sb.from("mortgages").select("*").eq("user_id", user.id);
+    mortgages = mRes.data || [];
+
+    var rRes = await sb.from("rental_contracts").select("*").eq("user_id", user.id).order("contract_end", { ascending: false });
+    rentalContracts = rRes.data || [];
+
     render();
     renderFilterList();
     renderClientsCard();
+  }
+
+  function mortgageFor(propertyId){
+    return mortgages.filter(function(m){ return m.property_id === propertyId; })[0] || null;
+  }
+  function latestRentalContractFor(propertyId){
+    return rentalContracts.filter(function(c){ return c.property_id === propertyId; })[0] || null;
   }
 
   function render(){
@@ -512,8 +565,24 @@
         var match = clients.filter(function(c){ return c.id === r.client_id; })[0];
         clientName = match ? match.name : "—";
       }
+
+      var mortgage = mortgageFor(r.id);
+      var mortgageCell = mortgage
+        ? AED(mortgage.monthly_installment) + "/mo <button class='miniLink editMortgageBtn' data-id='" + r.id + "'>edit</button>"
+        : "<button class='miniLink addMortgageBtn' data-id='" + r.id + "'>+ Add</button>";
+
+      var contract = latestRentalContractFor(r.id);
+      var today = new Date().toISOString().slice(0,10);
+      var rentalCell;
+      if(contract && contract.contract_end >= today){
+        rentalCell = "Active until " + contract.contract_end + " <button class='miniLink addRentalBtn' data-id='" + r.id + "'>+ new</button>";
+      } else {
+        rentalCell = "<button class='miniLink addRentalBtn' data-id='" + r.id + "'>+ Add</button>";
+      }
+
       tr.innerHTML =
         "<td>" + (r.community_name || "—") + "</td>" +
+        "<td>" + (r.building_name || "—") + "</td>" +
         "<td>" + (r.property_label || "—") + "</td>" +
         "<td>" + (r.group_label || "—") + "</td>" +
         "<td><span class='statusBadge " + r.status + "'>" + statusLabel + "</span></td>" +
@@ -522,8 +591,17 @@
         "<td>" + (r.size_sqft ? r.size_sqft.toLocaleString("en-AE") + " sqft" : "—") + "</td>" +
         "<td>" + clientName + "</td>" +
         "<td>Coming soon</td>" +
+        "<td>" + mortgageCell + "</td>" +
+        "<td>" + rentalCell + "</td>" +
         "<td><button class='delBtn' data-id='" + r.id + "'>Remove</button></td>";
       body.appendChild(tr);
+    });
+
+    W.querySelectorAll(".addMortgageBtn, .editMortgageBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){ openMortgagePanel(btn.dataset.id); });
+    });
+    W.querySelectorAll(".addRentalBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){ openRentalPanel(btn.dataset.id); });
     });
 
     W.querySelectorAll(".delBtn").forEach(function(btn){
@@ -549,6 +627,7 @@
     var res = await sb.from("properties").insert({
       user_id: user.id,
       community_name: community,
+      building_name: $("newBuilding").value.trim() || null,
       property_label: $("newLabel").value.trim() || null,
       group_label: $("newGroup").value.trim() || null,
       status: $("newStatus").value,
@@ -562,6 +641,7 @@
     if(res.error){ $("addErr").textContent = "Could not save — try again."; console.error(res.error); return; }
 
     $("newCommunity").value = "";
+    $("newBuilding").value = "";
     $("newLabel").value = "";
     $("newGroup").value = "";
     $("newPrice").value = "";
@@ -571,6 +651,136 @@
     $("newClient").value = "";
     await loadProperties();
     renderClientsCard();
+  });
+
+  // ---- Mortgage panel ----
+  var currentMortgagePropertyId = null;
+
+  function openMortgagePanel(propertyId){
+    currentMortgagePropertyId = propertyId;
+    var existing = mortgageFor(propertyId);
+    $("mLender").value = existing ? (existing.lender || "") : "";
+    $("mLoanAmount").value = existing ? existing.loan_amount : "";
+    $("mMonthlyInstallment").value = existing ? existing.monthly_installment : "";
+    $("mInterestRate").value = existing ? (existing.interest_rate || "") : "";
+    $("mStartDate").value = existing ? existing.start_date : "";
+    $("mTermMonths").value = existing ? existing.term_months : "";
+    $("mortgageErr").textContent = "";
+    $("mortgagePanel").style.display = "block";
+    $("mortgagePanel").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  $("cancelMortgageBtn").addEventListener("click", function(){
+    $("mortgagePanel").style.display = "none";
+    currentMortgagePropertyId = null;
+  });
+
+  $("saveMortgageBtn").addEventListener("click", async function(){
+    var loanAmount = +$("mLoanAmount").value;
+    var monthlyInstallment = +$("mMonthlyInstallment").value;
+    var startDate = $("mStartDate").value;
+    var termMonths = +$("mTermMonths").value;
+
+    if(!loanAmount || !monthlyInstallment || !startDate || !termMonths){
+      $("mortgageErr").textContent = "Loan amount, monthly installment, start date, and term are all required.";
+      return;
+    }
+
+    var user = (await sb.auth.getUser()).data.user;
+    var existing = mortgageFor(currentMortgagePropertyId);
+    var payload = {
+      property_id: currentMortgagePropertyId,
+      user_id: user.id,
+      lender: $("mLender").value.trim() || null,
+      loan_amount: loanAmount,
+      monthly_installment: monthlyInstallment,
+      interest_rate: +$("mInterestRate").value || null,
+      start_date: startDate,
+      term_months: termMonths
+    };
+
+    var res = existing
+      ? await sb.from("mortgages").update(payload).eq("id", existing.id)
+      : await sb.from("mortgages").insert(payload);
+
+    if(res.error){ $("mortgageErr").textContent = "Could not save — try again."; console.error(res.error); return; }
+
+    $("mortgagePanel").style.display = "none";
+    currentMortgagePropertyId = null;
+    await loadProperties();
+    loadCashflow();
+  });
+
+  // ---- Rental contract panel ----
+  var currentRentalPropertyId = null;
+
+  function openRentalPanel(propertyId){
+    currentRentalPropertyId = propertyId;
+    $("rTenantName").value = "";
+    $("rTenantContact").value = "";
+    $("rStart").value = "";
+    $("rEnd").value = "";
+    $("rAnnualRent").value = "";
+    $("rCheques").value = "1";
+    $("rentalErr").textContent = "";
+    $("rentalPanel").style.display = "block";
+    $("rentalPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  $("cancelRentalBtn").addEventListener("click", function(){
+    $("rentalPanel").style.display = "none";
+    currentRentalPropertyId = null;
+  });
+
+  // Splits the annual rent into N evenly-spaced cheques across the
+  // contract period — a common UAE convention (1, 2, 4, or more
+  // cheques per year). Due dates spread evenly from start to end.
+  function buildPaymentSchedule(start, end, annualRent, numCheques){
+    var startDate = new Date(start), endDate = new Date(end);
+    var totalDays = (endDate - startDate) / (1000*60*60*24);
+    var schedule = [];
+    var amountPer = Math.round(annualRent / numCheques);
+    for(var i = 0; i < numCheques; i++){
+      var dueDate = new Date(startDate.getTime() + (totalDays * i / numCheques) * 24*60*60*1000);
+      schedule.push({ due_date: dueDate.toISOString().slice(0,10), amount: amountPer, paid: false });
+    }
+    return schedule;
+  }
+
+  $("saveRentalBtn").addEventListener("click", async function(){
+    var start = $("rStart").value, end = $("rEnd").value;
+    var annualRent = +$("rAnnualRent").value;
+    var cheques = +$("rCheques").value || 1;
+
+    if(!start || !end || !annualRent){
+      $("rentalErr").textContent = "Contract start, end, and annual rent are required.";
+      return;
+    }
+    if(end <= start){
+      $("rentalErr").textContent = "Contract end must be after the start date.";
+      return;
+    }
+
+    var user = (await sb.auth.getUser()).data.user;
+    var schedule = buildPaymentSchedule(start, end, annualRent, cheques);
+
+    var res = await sb.from("rental_contracts").insert({
+      property_id: currentRentalPropertyId,
+      user_id: user.id,
+      tenant_name: $("rTenantName").value.trim() || null,
+      tenant_contact: $("rTenantContact").value.trim() || null,
+      contract_start: start,
+      contract_end: end,
+      annual_rent: annualRent,
+      payment_schedule: schedule
+    });
+
+    if(res.error){ $("rentalErr").textContent = "Could not save — try again."; console.error(res.error); return; }
+
+    $("rentalPanel").style.display = "none";
+    currentRentalPropertyId = null;
+    await loadProperties();
+    loadCashflow();
   });
 
   (async function init(){

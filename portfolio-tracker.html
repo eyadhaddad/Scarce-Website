@@ -403,7 +403,7 @@
       var data = await res.json();
       lastCashflowData = data;
 
-      var latest = data.timeline[data.timeline.length - 1] || data.currentMonthBreakdown;
+      var latest = data.timeline[0] || data.currentMonthBreakdown;
       $("cfRent").textContent = AED(latest.rentIn);
       $("cfMortgage").textContent = "-" + AED(latest.mortgageOut);
       $("cfService").textContent = "-" + AED(latest.serviceChargeOut);

@@ -61,11 +61,11 @@
       <canvas id="cfChart"></canvas>
       <div class="cfTip" id="cfTip"></div>
     </div>
-    <div class="cfChartNote">Bars = net cash flow per period (teal = positive, red = negative) · gold line = cumulative</div>
+    <div class="cfChartNote">Bars = inflow (teal, above) and outflow (red, below) per period · gold line = cumulative net, <b>from today onward</b> (not lifetime history) — right-side axis, colored to match</div>
   </div>
 
   <div class="card addCard">
-    <h2>Add a property</h2>
+    <h2 id="addCardHeading">Add a property</h2>
     <div class="addGrid">
       <div class="fld"><label>Community</label><input type="text" id="newCommunity" placeholder="e.g. Dubai Hills Estate"></div>
       <div class="fld"><label>Building</label><input type="text" id="newBuilding" placeholder="e.g. Golf Terrace 3"></div>
@@ -126,11 +126,12 @@
     <div class="fieldsRow2">
       <div class="fld"><label>Lender</label><input type="text" id="mLender" placeholder="e.g. Emirates NBD"></div>
       <div class="fld"><label>Loan amount (AED)</label><input type="number" id="mLoanAmount"></div>
-      <div class="fld"><label>Monthly installment (AED)</label><input type="number" id="mMonthlyInstallment"></div>
       <div class="fld"><label>Interest rate (%)</label><input type="number" id="mInterestRate" step="0.1"></div>
-      <div class="fld"><label>Start date</label><input type="date" id="mStartDate"></div>
       <div class="fld"><label>Term (months)</label><input type="number" id="mTermMonths"></div>
+      <div class="fld"><label>Start date</label><input type="date" id="mStartDate"></div>
+      <div class="fld"><label>Additional monthly cost (AED)</label><input type="number" id="mAdditionalCost" placeholder="e.g. insurance"></div>
     </div>
+    <div class="calcRow">Calculated monthly payment: <b id="mCalculatedPayment">AED 0</b> <span class="calcHint">(+ additional cost above = total monthly outflow)</span></div>
     <button class="addBtn" id="saveMortgageBtn">Save mortgage</button>
     <button class="cancelBtn" id="cancelMortgageBtn">Cancel</button>
     <div class="addErr" id="mortgageErr"></div>
@@ -203,6 +204,9 @@
 #scarce-portfolio .sidePanel{margin-top:16px}
 #scarce-portfolio .fieldsRow2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0}
 @media(max-width:700px){#scarce-portfolio .fieldsRow2{grid-template-columns:1fr 1fr}}
+#scarce-portfolio .calcRow{background:var(--mid);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--ink);margin-bottom:12px}
+#scarce-portfolio .calcRow b{color:var(--teal-deep);font-size:15px}
+#scarce-portfolio .calcHint{color:var(--grey);font-size:11px}
 #scarce-portfolio .addClientBtn{margin-top:6px;background:none;border:1px solid var(--teal);color:var(--teal-deep);font:inherit;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer}
 #scarce-portfolio .newClientForm{margin-top:12px;padding:12px;background:var(--mid);border-radius:8px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end}
 @media(max-width:640px){#scarce-portfolio .newClientForm{grid-template-columns:1fr}}
@@ -427,50 +431,77 @@
     loadCashflow();
   }
 
-  // ---- Chart drawing (same bar + cumulative-line pattern as the Feasibility Study tool) ----
+  // ---- Chart drawing: stacked inflow/outflow bars + cumulative line
+  // on its own secondary axis (right side, colored to match the line
+  // so it's clear which scale belongs to which series). Cumulative is
+  // explicitly "from today" — there's no way to know history before a
+  // property was added to the tracker, so it must never look like a
+  // lifetime total. ----
   var _bars = [];
   function drawCashflowChart(data){
     var cv = $("cfChart");
     if(!cv || !data || !data.length) return;
     var dpr = window.devicePixelRatio || 1;
-    var cssW = cv.clientWidth || cv.parentElement.clientWidth || 600, cssH = 180;
+    var cssW = cv.clientWidth || cv.parentElement.clientWidth || 600, cssH = 190;
     cv.width = cssW * dpr; cv.height = cssH * dpr;
     var ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    var padL = 8, padR = 8, padT = 14, padB = 22;
+    var padL = 8, padR = 46, padT = 14, padB = 22; // padR reserved for the gold cumulative axis
     var w = cssW - padL - padR, h = cssH - padT - padB;
+    var zeroY = padT + h / 2;
 
-    var nets = data.map(function(d){ return d.net; });
+    var inflows = data.map(function(d){ return d.rentIn || 0; });
+    var outflows = data.map(function(d){ return (d.mortgageOut||0) + (d.serviceChargeOut||0) + (d.offplanOut||0); });
     var cum = 0, cums = data.map(function(d){ cum += d.net; return cum; });
 
-    var maxV = Math.max.apply(null, nets.concat(cums, [0]));
-    var minV = Math.min.apply(null, nets.concat(cums, [0]));
-    if(maxV === minV){ maxV += 1; minV -= 1; }
-    var pad = (maxV - minV) * 0.15; maxV += pad; minV -= pad;
-    function Y(v){ return padT + (maxV - v) / (maxV - minV) * h; }
-    var zeroY = Y(0);
+    var barMax = Math.max.apply(null, inflows.concat(outflows, [1]));
+    var lineMax = Math.max.apply(null, cums.map(Math.abs).concat([1]));
+    barMax *= 1.15; lineMax *= 1.15;
 
+    function Y_bars(v){ return zeroY - (v / barMax) * (h / 2); }
+    function Y_line(v){ return zeroY - (v / lineMax) * (h / 2); }
+
+    // Zero line
     ctx.strokeStyle = "rgba(255,255,255,.15)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(padL + w, zeroY); ctx.stroke();
 
-    var n = data.length, bw = Math.max(2, w / n * 0.6), gap = w / n;
+    var n = data.length, bw = Math.max(2, w / n * 0.55), gap = w / n;
     _bars = [];
     for(var i = 0; i < n; i++){
       var cx = padL + gap * i + gap / 2;
-      var v = nets[i]; var y0 = Y(0), y1 = Y(v);
-      var top = Math.min(y0, y1), hgt = Math.max(Math.abs(y1 - y0), 0.5);
-      ctx.fillStyle = v >= 0 ? "#0E9B96" : "#C0392B";
-      ctx.fillRect(cx - bw / 2, top, bw, hgt);
-      _bars.push({ x: cx, x0: cx - gap / 2, x1: cx + gap / 2, d: data[i], cum: cums[i] });
+
+      // Inflow segment — stacked above zero
+      var yIn = Y_bars(inflows[i]);
+      ctx.fillStyle = "#0E9B96";
+      ctx.fillRect(cx - bw/2, yIn, bw, zeroY - yIn);
+
+      // Outflow segment — stacked below zero, own color so it's easy
+      // to tell apart from inflow at a glance
+      ctx.fillStyle = "#C0392B";
+      var outBottom = zeroY + (h/2) * (outflows[i]/barMax);
+      ctx.fillRect(cx - bw/2, zeroY, bw, outBottom - zeroY);
+
+      _bars.push({ x: cx, x0: cx - gap/2, x1: cx + gap/2, d: data[i], cum: cums[i], inflow: inflows[i], outflow: outflows[i] });
     }
 
+    // Cumulative line — secondary axis, gold, drawn on its own
+    // independent scale (lineMax), sharing only the same zero row
     ctx.strokeStyle = "#C9952B"; ctx.lineWidth = 2; ctx.beginPath();
     for(var j = 0; j < n; j++){
-      var cx2 = padL + gap * j + gap / 2, y = Y(cums[j]);
+      var cx2 = padL + gap * j + gap / 2, y = Y_line(cums[j]);
       j ? ctx.lineTo(cx2, y) : ctx.moveTo(cx2, y);
     }
     ctx.stroke();
+
+    // Secondary (right) axis — colored gold to visually pair with the
+    // line, so it's unambiguous which scale the line belongs to
+    ctx.strokeStyle = "#C9952B"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL + w, padT); ctx.lineTo(padL + w, padT + h); ctx.stroke();
+    ctx.fillStyle = "#C9952B"; ctx.font = "9px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(AEDk(lineMax), padL + w + 4, padT + 8);
+    ctx.fillText("0", padL + w + 4, zeroY + 3);
+    ctx.fillText(AEDk(-lineMax), padL + w + 4, padT + h - 2);
 
     ctx.fillStyle = "#8B9299"; ctx.font = "10px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign = "center";
     var step = Math.max(1, Math.ceil(n / 8));
@@ -479,6 +510,8 @@
       ctx.fillText(String(data[k].month), cx3, cssH - 7);
     }
   }
+
+  function AEDk(n){ return n>=1e6||n<=-1e6 ? (n/1e6).toFixed(1)+"M" : Math.round(n).toLocaleString("en-AE"); }
 
   (function(){
     var cv = $("cfChart"), tip = $("cfTip");
@@ -492,7 +525,7 @@
       if(hit){
         tip.classList.add("on");
         tip.style.left = hit.x + "px"; tip.style.top = "14px";
-        tip.innerHTML = hit.d.month + ": <b>" + AEDsigned(hit.d.net) + "</b><br>cumulative: " + AEDsigned(hit.cum);
+        tip.innerHTML = hit.d.month + ": <b>+" + AED(hit.inflow) + "</b> / <b>-" + AED(hit.outflow) + "</b><br>net " + AEDsigned(hit.d.net) + " · cumulative (from today): " + AEDsigned(hit.cum);
       } else tip.classList.remove("on");
     });
     cv.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
@@ -593,7 +626,7 @@
         "<td>Coming soon</td>" +
         "<td>" + mortgageCell + "</td>" +
         "<td>" + rentalCell + "</td>" +
-        "<td><button class='delBtn' data-id='" + r.id + "'>Remove</button></td>";
+        "<td><button class='miniLink editPropertyBtn' data-id='" + r.id + "'>Edit</button> · <button class='delBtn' data-id='" + r.id + "'>Remove</button></td>";
       body.appendChild(tr);
     });
 
@@ -603,6 +636,9 @@
     W.querySelectorAll(".addRentalBtn").forEach(function(btn){
       btn.addEventListener("click", function(){ openRentalPanel(btn.dataset.id); });
     });
+    W.querySelectorAll(".editPropertyBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){ openEditProperty(btn.dataset.id); });
+    });
 
     W.querySelectorAll(".delBtn").forEach(function(btn){
       btn.addEventListener("click", async function(){
@@ -611,6 +647,27 @@
         loadProperties();
       });
     });
+  }
+
+  var currentEditPropertyId = null;
+
+  function openEditProperty(propertyId){
+    var p = rows.filter(function(r){ return r.id === propertyId; })[0];
+    if(!p) return;
+    currentEditPropertyId = propertyId;
+    $("newCommunity").value = p.community_name || "";
+    $("newBuilding").value = p.building_name || "";
+    $("newLabel").value = p.property_label || "";
+    $("newGroup").value = p.group_label || "";
+    $("newStatus").value = p.status || "ready";
+    $("newPrice").value = p.purchase_price || "";
+    $("newDate").value = p.purchase_date || "";
+    $("newSize").value = p.size_sqft || "";
+    $("newServiceCharge").value = p.service_charge_psf || "";
+    $("newClient").value = p.client_id || "";
+    $("addCardHeading").textContent = "Edit property";
+    $("addBtn").textContent = "Update property";
+    $("addCardHeading").scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   $("addBtn").addEventListener("click", async function(){
@@ -624,7 +681,7 @@
     var user = (await sb.auth.getUser()).data.user;
     if(!user){ $("addErr").textContent = "Please sign in."; return; }
 
-    var res = await sb.from("properties").insert({
+    var payload = {
       user_id: user.id,
       community_name: community,
       building_name: $("newBuilding").value.trim() || null,
@@ -636,7 +693,11 @@
       size_sqft: +$("newSize").value || null,
       service_charge_psf: +$("newServiceCharge").value || null,
       client_id: $("newClient").value || null
-    });
+    };
+
+    var res = currentEditPropertyId
+      ? await sb.from("properties").update(payload).eq("id", currentEditPropertyId)
+      : await sb.from("properties").insert(payload);
 
     if(res.error){ $("addErr").textContent = "Could not save — try again."; console.error(res.error); return; }
 
@@ -649,6 +710,9 @@
     $("newSize").value = "";
     $("newServiceCharge").value = "";
     $("newClient").value = "";
+    currentEditPropertyId = null;
+    $("addCardHeading").textContent = "Add a property";
+    $("addBtn").textContent = "+ Add property";
     await loadProperties();
     renderClientsCard();
   });
@@ -656,16 +720,37 @@
   // ---- Mortgage panel ----
   var currentMortgagePropertyId = null;
 
+  // Standard amortization formula — same math as the Mortgage Calculator
+  // tool, so a loan modeled here matches what that tool would show.
+  function calculateMonthlyPayment(loanAmount, annualRatePct, termMonths){
+    if(!loanAmount || !termMonths) return 0;
+    var r = annualRatePct / 100 / 12;
+    if(r <= 0) return loanAmount / termMonths;
+    return loanAmount * r * Math.pow(1+r, termMonths) / (Math.pow(1+r, termMonths) - 1);
+  }
+
+  function updateCalculatedPayment(){
+    var loanAmount = +$("mLoanAmount").value || 0;
+    var rate = +$("mInterestRate").value || 0;
+    var term = +$("mTermMonths").value || 0;
+    var payment = calculateMonthlyPayment(loanAmount, rate, term);
+    $("mCalculatedPayment").textContent = AED(payment);
+  }
+  ["mLoanAmount","mInterestRate","mTermMonths"].forEach(function(id){
+    $(id).addEventListener("input", updateCalculatedPayment);
+  });
+
   function openMortgagePanel(propertyId){
     currentMortgagePropertyId = propertyId;
     var existing = mortgageFor(propertyId);
     $("mLender").value = existing ? (existing.lender || "") : "";
     $("mLoanAmount").value = existing ? existing.loan_amount : "";
-    $("mMonthlyInstallment").value = existing ? existing.monthly_installment : "";
     $("mInterestRate").value = existing ? (existing.interest_rate || "") : "";
     $("mStartDate").value = existing ? existing.start_date : "";
     $("mTermMonths").value = existing ? existing.term_months : "";
+    $("mAdditionalCost").value = existing ? (existing.additional_monthly_cost || "") : "";
     $("mortgageErr").textContent = "";
+    updateCalculatedPayment();
     $("mortgagePanel").style.display = "block";
     $("mortgagePanel").scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -677,14 +762,17 @@
 
   $("saveMortgageBtn").addEventListener("click", async function(){
     var loanAmount = +$("mLoanAmount").value;
-    var monthlyInstallment = +$("mMonthlyInstallment").value;
+    var rate = +$("mInterestRate").value;
     var startDate = $("mStartDate").value;
     var termMonths = +$("mTermMonths").value;
+    var additionalCost = +$("mAdditionalCost").value || 0;
 
-    if(!loanAmount || !monthlyInstallment || !startDate || !termMonths){
-      $("mortgageErr").textContent = "Loan amount, monthly installment, start date, and term are all required.";
+    if(!loanAmount || !startDate || !termMonths){
+      $("mortgageErr").textContent = "Loan amount, start date, and term are all required.";
       return;
     }
+
+    var monthlyInstallment = calculateMonthlyPayment(loanAmount, rate, termMonths);
 
     var user = (await sb.auth.getUser()).data.user;
     var existing = mortgageFor(currentMortgagePropertyId);
@@ -694,7 +782,8 @@
       lender: $("mLender").value.trim() || null,
       loan_amount: loanAmount,
       monthly_installment: monthlyInstallment,
-      interest_rate: +$("mInterestRate").value || null,
+      additional_monthly_cost: additionalCost,
+      interest_rate: rate || null,
       start_date: startDate,
       term_months: termMonths
     };

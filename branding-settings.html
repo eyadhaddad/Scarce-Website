@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Export Branding — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:640px;margin:0 auto;padding:4px 16px 40px}
+  #bs *{box-sizing:border-box}
+  .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:16px 0 6px}
+  .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+  .subLead{color:var(--grey);font-size:13.5px;margin-bottom:20px;line-height:1.5}
+  .secCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:14px}
+  .fld{margin-bottom:16px}
+  .fld label{display:block;font-size:12px;color:var(--grey);font-weight:700;margin-bottom:6px}
+  .fld input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13.5px;background:var(--cream);color:var(--navy);font-weight:600}
+  .fld input:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .logoRow{display:flex;align-items:center;gap:16px}
+  .logoPreview{width:80px;height:80px;border-radius:10px;border:1px solid var(--line);background:var(--mid);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+  .logoPreview img{max-width:100%;max-height:100%;object-fit:contain}
+  .logoPreview .placeholder{color:var(--grey);font-size:10px;text-align:center;padding:4px}
+  .fileInputWrap{flex:1}
+  .fileInputWrap input[type=file]{width:100%;padding:8px;border:1px dashed var(--line);border-radius:8px;font-size:12.5px;background:var(--cream);cursor:pointer}
+  .hint{font-size:11px;color:var(--grey);margin-top:5px}
+  .runBtn{background:var(--teal);color:#fff;border:none;font:inherit;font-weight:700;font-size:14px;padding:12px 24px;border-radius:9px;cursor:pointer;margin-top:6px}
+  .runBtn:hover{background:var(--teal-deep)}
+  .runBtn:disabled{background:var(--grey);cursor:not-allowed}
+  .genErr{color:#C0392B;font-size:12.5px;margin-top:10px}
+  .genOk{color:#0B7A76;font-size:12.5px;margin-top:10px}
+  .previewCard{background:var(--navy);border-radius:12px;padding:20px 22px;color:#fff}
+  .previewCard h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:14px}
+  .previewDoc{background:#fff;color:#14181C;border-radius:8px;padding:16px;font-size:12px}
+  .previewDoc .pdHead{display:flex;align-items:center;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:10px}
+  .previewDoc .pdLogo{width:44px;height:44px;border-radius:6px;background:var(--mid);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+  .previewDoc .pdLogo img{max-width:100%;max-height:100%;object-fit:contain}
+  .previewDoc .pdName{font-weight:800;color:var(--navy)}
+  .previewDoc .pdContact{font-size:10.5px;color:var(--grey)}
+  .rGate{background:var(--navy);border-radius:14px;padding:40px 30px;color:#fff;text-align:center;max-width:520px;margin:60px auto}
+  .rGate h3{font-size:19px;font-weight:800;margin-bottom:8px}
+  .rGate p{font-size:13.5px;color:#C9CDD2;margin-bottom:16px;line-height:1.5}
+  .rGate a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px}
+  .loading{color:var(--grey);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div id="bs"><p class="loading">Checking your account…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+
+  var $ = function(id){ return document.getElementById(id); };
+  var currentUser = null;
+  var currentLogoUrl = null;
+  var selectedFile = null;
+
+  function renderGate(){
+    $("bs").innerHTML = '<div class="rGate"><h3>Export Branding is part of Scarce Plus</h3>'+
+      '<p>Upgrade to Scarce Plus to set a logo and contact info that appears automatically on your Feasibility Study and Contract Generator exports.</p>'+
+      '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
+  }
+
+  async function init(){
+    var session = (await sb.auth.getSession()).data.session;
+    if(!session){ renderGate(); return; }
+    currentUser = session.user;
+
+    var profRes = await sb.from("profiles").select("tier, name, contact_info, logo_url").eq("id", currentUser.id).single();
+    if(!profRes.data || profRes.data.tier !== "paid"){ renderGate(); return; }
+
+    renderForm(profRes.data);
+  }
+
+  function renderForm(profile){
+    currentLogoUrl = profile.logo_url || null;
+
+    $("bs").innerHTML =
+      '<div class="toolTitle">SCARCE <span>Export Branding</span></div>'+
+      '<div class="subLead">Set this once — your logo and contact info will appear automatically on Feasibility Study and Contract Generator exports going forward.</div>'+
+
+      '<div class="secCard">'+
+        '<div class="fld"><label>Display name (for exports)</label><input type="text" id="bName" value="'+esc(profile.name||"")+'"></div>'+
+        '<div class="fld"><label>Contact info (phone or email, shown on exports)</label><input type="text" id="bContact" value="'+esc(profile.contact_info||"")+'"></div>'+
+        '<div class="fld"><label>Logo</label>'+
+          '<div class="logoRow">'+
+            '<div class="logoPreview" id="logoPreview">'+(currentLogoUrl ? "<img src='"+currentLogoUrl+"'>" : "<span class='placeholder'>No logo yet</span>")+'</div>'+
+            '<div class="fileInputWrap"><input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml"><div class="hint">PNG, JPG, or SVG. Square logos look best.</div></div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="runBtn" id="saveBtn">Save branding</button>'+
+        '<div class="genErr" id="genErr"></div>'+
+        '<div class="genOk" id="genOk"></div>'+
+      '</div>'+
+
+      '<div class="previewCard"><h2>How this looks on an export</h2>'+
+        '<div class="previewDoc" id="previewDoc">'+
+          '<div class="pdHead"><div class="pdLogo" id="pdLogo">'+(currentLogoUrl ? "<img src='"+currentLogoUrl+"'>" : "")+'</div>'+
+          '<div><div class="pdName" id="pdName">'+esc(profile.name||"Your name")+'</div><div class="pdContact" id="pdContact">'+esc(profile.contact_info||"Your contact info")+'</div></div></div>'+
+          '<div style="color:#999;font-style:italic">Report content appears below the branded header…</div>'+
+        '</div>'+
+      '</div>';
+
+    wireEvents();
+  }
+
+  function esc(s){ return (s||"").toString().replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  function wireEvents(){
+    $("logoFile").addEventListener("change", function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      selectedFile = file;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        $("logoPreview").innerHTML = "<img src='"+ev.target.result+"'>";
+        $("pdLogo").innerHTML = "<img src='"+ev.target.result+"'>";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $("bName").addEventListener("input", function(){ $("pdName").textContent = this.value || "Your name"; });
+    $("bContact").addEventListener("input", function(){ $("pdContact").textContent = this.value || "Your contact info"; });
+
+    $("saveBtn").addEventListener("click", saveBranding);
+  }
+
+  async function saveBranding(){
+    var err = $("genErr"), ok = $("genOk");
+    err.textContent = ""; ok.textContent = "";
+    $("saveBtn").disabled = true; $("saveBtn").textContent = "Saving…";
+
+    try {
+      var logoUrl = currentLogoUrl;
+
+      if(selectedFile){
+        var ext = selectedFile.name.split(".").pop();
+        var path = currentUser.id + "/logo." + ext;
+        var upRes = await sb.storage.from("logos").upload(path, selectedFile, { upsert: true, contentType: selectedFile.type });
+        if(upRes.error){ throw new Error("Logo upload failed: " + upRes.error.message); }
+        var pub = sb.storage.from("logos").getPublicUrl(path);
+        logoUrl = pub.data.publicUrl + "?t=" + Date.now(); // cache-bust so updated logos show immediately
+      }
+
+      var res = await sb.from("profiles").update({
+        name: $("bName").value.trim() || null,
+        contact_info: $("bContact").value.trim() || null,
+        logo_url: logoUrl
+      }).eq("id", currentUser.id);
+
+      if(res.error){ throw new Error("Could not save — try again."); }
+
+      currentLogoUrl = logoUrl;
+      selectedFile = null;
+      ok.textContent = "Branding saved.";
+    } catch(e){
+      err.textContent = e.message;
+      console.error(e);
+    } finally {
+      $("saveBtn").disabled = false; $("saveBtn").textContent = "Save branding";
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

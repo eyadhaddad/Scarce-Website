@@ -61,7 +61,13 @@
       <canvas id="cfChart"></canvas>
       <div class="cfTip" id="cfTip"></div>
     </div>
-    <div class="cfChartNote">Bars = inflow (teal, above) and outflow (red, below) per period · gold line = cumulative net, <b>from today onward</b> (not lifetime history) — right-side axis, colored to match</div>
+    <div class="cfLegend">
+      <span class="legItem"><i style="background:#0E9B96"></i>Rent in</span>
+      <span class="legItem"><i style="background:#C0392B"></i>Mortgage</span>
+      <span class="legItem"><i style="background:#D9772F"></i>Service charge</span>
+      <span class="legItem"><i style="background:#7A5FBF"></i>Off-plan</span>
+      <span class="legItem"><i class="legLine" style="background:#C9952B"></i>Cumulative (from today, right axis)</span>
+    </div>
   </div>
 
   <div class="card addCard">
@@ -114,7 +120,7 @@
   <div class="listWrap" id="listWrap">
     <p class="empty" id="emptyMsg">No properties yet — add your first one above.</p>
     <table class="pTable" id="pTable" style="display:none">
-      <thead><tr><th>Community</th><th>Building</th><th>Label</th><th>Group</th><th>Status</th><th>Purchase price</th><th>Date</th><th>Size</th><th>Client</th><th>Market value</th><th>Mortgage</th><th>Rental</th><th></th></tr></thead>
+      <thead><tr><th>Community</th><th>Building</th><th>Label</th><th>Group</th><th>Status</th><th>Purchase price</th><th>Date</th><th>Size</th><th>Client</th><th>Market value</th><th>Mortgage</th><th>Rental</th><th>Off-plan</th><th></th></tr></thead>
       <tbody id="pTableBody"></tbody>
     </table>
   </div>
@@ -145,11 +151,32 @@
       <div class="fld"><label>Contract start</label><input type="date" id="rStart"></div>
       <div class="fld"><label>Contract end</label><input type="date" id="rEnd"></div>
       <div class="fld"><label>Annual rent (AED)</label><input type="number" id="rAnnualRent"></div>
-      <div class="fld"><label>Number of cheques</label><input type="number" id="rCheques" value="1" min="1"></div>
     </div>
+    <div class="scheduleHead">
+      <span>Payment schedule</span>
+      <div>
+        <input type="number" id="rEvenSplitCount" value="1" min="1" style="width:60px;display:inline-block">
+        <button type="button" class="addClientBtn" id="rEvenSplitBtn">Split evenly</button>
+        <button type="button" class="addClientBtn" id="rAddChequeBtn">+ Add cheque</button>
+      </div>
+    </div>
+    <div class="scheduleHint">Use "Split evenly" as a starting point, then edit any date or amount individually — e.g. 50% on day 1, the rest ~3 months later.</div>
+    <table class="scheduleTable" id="rScheduleTable"><thead><tr><th>Due date</th><th>Amount (AED)</th><th></th></tr></thead><tbody id="rScheduleBody"></tbody></table>
     <button class="addBtn" id="saveRentalBtn">Save contract</button>
     <button class="cancelBtn" id="cancelRentalBtn">Cancel</button>
     <div class="addErr" id="rentalErr"></div>
+  </div>
+
+  <div class="card sidePanel" id="offplanPanel" style="display:none">
+    <h2>Off-plan payment schedule</h2>
+    <div class="scheduleHead">
+      <span>Milestones</span>
+      <div><button type="button" class="addClientBtn" id="oAddMilestoneBtn">+ Add milestone</button></div>
+    </div>
+    <table class="scheduleTable" id="oScheduleTable"><thead><tr><th>Milestone</th><th>Due date</th><th>Amount (AED)</th><th>Paid?</th><th></th></tr></thead><tbody id="oScheduleBody"></tbody></table>
+    <button class="addBtn" id="saveOffplanBtn">Save schedule</button>
+    <button class="cancelBtn" id="cancelOffplanBtn">Cancel</button>
+    <div class="addErr" id="offplanErr"></div>
   </div>
 
 </div>
@@ -199,7 +226,10 @@
 #scarce-portfolio #cfChart{width:100%;height:180px;display:block;cursor:crosshair}
 #scarce-portfolio .cfTip{position:absolute;pointer-events:none;background:#fff;color:var(--navy);font-size:11.5px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:5;transform:translate(-50%,-115%);box-shadow:0 4px 12px rgba(0,0,0,.2)}
 #scarce-portfolio .cfTip.on{opacity:1}
-#scarce-portfolio .cfChartNote{font-size:10.5px;color:#8B9299;margin-top:8px}
+#scarce-portfolio .cfLegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;justify-content:center}
+#scarce-portfolio .legItem{display:flex;align-items:center;gap:6px;font-size:11px;color:#B9BDC2}
+#scarce-portfolio .legItem i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#scarce-portfolio .legItem i.legLine{height:2px;border-radius:0;width:14px}
 #scarce-portfolio .miniLink{background:none;border:none;color:var(--teal-deep);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline}
 #scarce-portfolio .sidePanel{margin-top:16px}
 #scarce-portfolio .fieldsRow2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0}
@@ -207,6 +237,15 @@
 #scarce-portfolio .calcRow{background:var(--mid);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--ink);margin-bottom:12px}
 #scarce-portfolio .calcRow b{color:var(--teal-deep);font-size:15px}
 #scarce-portfolio .calcHint{color:var(--grey);font-size:11px}
+#scarce-portfolio .scheduleHead{display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px;flex-wrap:wrap;gap:8px}
+#scarce-portfolio .scheduleHead span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800}
+#scarce-portfolio .scheduleHint{font-size:11px;color:var(--grey);font-style:italic;margin-bottom:8px}
+#scarce-portfolio .scheduleTable{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px}
+#scarce-portfolio .scheduleTable th{background:var(--mid);color:var(--navy);font-size:10px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:6px 8px;font-weight:700}
+#scarce-portfolio .scheduleTable td{padding:5px 8px;border-bottom:1px solid var(--line)}
+#scarce-portfolio .scheduleTable input[type=date], #scarce-portfolio .scheduleTable input[type=number]{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:12px;background:var(--cream);color:var(--navy)}
+#scarce-portfolio .scheduleTable input[type=checkbox]{width:auto}
+#scarce-portfolio .rmRowBtn{background:none;border:none;color:var(--red);cursor:pointer;font-weight:700;font-size:12px}
 #scarce-portfolio .addClientBtn{margin-top:6px;background:none;border:1px solid var(--teal);color:var(--teal-deep);font:inherit;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer}
 #scarce-portfolio .newClientForm{margin-top:12px;padding:12px;background:var(--mid);border-radius:8px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end}
 @media(max-width:640px){#scarce-portfolio .newClientForm{grid-template-columns:1fr}}
@@ -476,11 +515,24 @@
       ctx.fillStyle = "#0E9B96";
       ctx.fillRect(cx - bw/2, yIn, bw, zeroY - yIn);
 
-      // Outflow segment — stacked below zero, own color so it's easy
-      // to tell apart from inflow at a glance
-      ctx.fillStyle = "#C0392B";
-      var outBottom = zeroY + (h/2) * (outflows[i]/barMax);
-      ctx.fillRect(cx - bw/2, zeroY, bw, outBottom - zeroY);
+      // Outflow — stacked BELOW zero as separate colored segments per
+      // cost category (mortgage, service charge, off-plan), not one
+      // combined block, so it's clear where the money is actually
+      // going, not just that it's going out.
+      var d0 = data[i];
+      var segments = [
+        { v: d0.mortgageOut || 0, color: "#C0392B" },      // mortgage — red
+        { v: d0.serviceChargeOut || 0, color: "#D9772F" },  // service charge — orange
+        { v: d0.offplanOut || 0, color: "#7A5FBF" },        // off-plan payments — purple
+      ];
+      var runningY = zeroY;
+      segments.forEach(function(seg){
+        if(seg.v <= 0) return;
+        var segHeight = (h/2) * (seg.v / barMax);
+        ctx.fillStyle = seg.color;
+        ctx.fillRect(cx - bw/2, runningY, bw, segHeight);
+        runningY += segHeight;
+      });
 
       _bars.push({ x: cx, x0: cx - gap/2, x1: cx + gap/2, d: data[i], cum: cums[i], inflow: inflows[i], outflow: outflows[i] });
     }
@@ -525,7 +577,10 @@
       if(hit){
         tip.classList.add("on");
         tip.style.left = hit.x + "px"; tip.style.top = "14px";
-        tip.innerHTML = hit.d.month + ": <b>+" + AED(hit.inflow) + "</b> / <b>-" + AED(hit.outflow) + "</b><br>net " + AEDsigned(hit.d.net) + " · cumulative (from today): " + AEDsigned(hit.cum);
+        var mo = hit.d.mortgageOut || 0, sc = hit.d.serviceChargeOut || 0, op = hit.d.offplanOut || 0;
+        tip.innerHTML = hit.d.month + ": <b>+" + AED(hit.inflow) + "</b> rent<br>" +
+          "-" + AED(mo) + " mortgage · -" + AED(sc) + " service · -" + AED(op) + " off-plan<br>" +
+          "net " + AEDsigned(hit.d.net) + " · cumulative (from today): " + AEDsigned(hit.cum);
       } else tip.classList.remove("on");
     });
     cv.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
@@ -613,6 +668,14 @@
         rentalCell = "<button class='miniLink addRentalBtn' data-id='" + r.id + "'>+ Add</button>";
       }
 
+      var offplanCell = "—";
+      if(r.status === "off_plan"){
+        var schedule = r.offplan_payment_schedule || [];
+        offplanCell = schedule.length
+          ? schedule.length + " milestone" + (schedule.length===1?"":"s") + " <button class='miniLink editOffplanBtn' data-id='" + r.id + "'>edit</button>"
+          : "<button class='miniLink editOffplanBtn' data-id='" + r.id + "'>+ Add</button>";
+      }
+
       tr.innerHTML =
         "<td>" + (r.community_name || "—") + "</td>" +
         "<td>" + (r.building_name || "—") + "</td>" +
@@ -626,6 +689,7 @@
         "<td>Coming soon</td>" +
         "<td>" + mortgageCell + "</td>" +
         "<td>" + rentalCell + "</td>" +
+        "<td>" + offplanCell + "</td>" +
         "<td><button class='miniLink editPropertyBtn' data-id='" + r.id + "'>Edit</button> · <button class='delBtn' data-id='" + r.id + "'>Remove</button></td>";
       body.appendChild(tr);
     });
@@ -638,6 +702,9 @@
     });
     W.querySelectorAll(".editPropertyBtn").forEach(function(btn){
       btn.addEventListener("click", function(){ openEditProperty(btn.dataset.id); });
+    });
+    W.querySelectorAll(".editOffplanBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){ openOffplanPanel(btn.dataset.id); });
     });
 
     W.querySelectorAll(".delBtn").forEach(function(btn){
@@ -802,6 +869,7 @@
 
   // ---- Rental contract panel ----
   var currentRentalPropertyId = null;
+  var rentalSchedule = []; // working copy of {due_date, amount} rows while the panel is open
 
   function openRentalPanel(propertyId){
     currentRentalPropertyId = propertyId;
@@ -810,7 +878,8 @@
     $("rStart").value = "";
     $("rEnd").value = "";
     $("rAnnualRent").value = "";
-    $("rCheques").value = "1";
+    rentalSchedule = [];
+    renderRentalScheduleTable();
     $("rentalErr").textContent = "";
     $("rentalPanel").style.display = "block";
     $("rentalPanel").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -821,25 +890,63 @@
     currentRentalPropertyId = null;
   });
 
-  // Splits the annual rent into N evenly-spaced cheques across the
-  // contract period — a common UAE convention (1, 2, 4, or more
-  // cheques per year). Due dates spread evenly from start to end.
-  function buildPaymentSchedule(start, end, annualRent, numCheques){
+  function renderRentalScheduleTable(){
+    var body = $("rScheduleBody");
+    body.innerHTML = "";
+    rentalSchedule.forEach(function(row, idx){
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input type='date' class='rDate' data-idx='" + idx + "' value='" + (row.due_date||"") + "'></td>" +
+        "<td><input type='number' class='rAmt' data-idx='" + idx + "' value='" + (row.amount||0) + "'></td>" +
+        "<td><button type='button' class='rmRowBtn' data-idx='" + idx + "'>Remove</button></td>";
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".rDate").forEach(function(inp){
+      inp.addEventListener("input", function(){ rentalSchedule[+inp.dataset.idx].due_date = inp.value; });
+    });
+    body.querySelectorAll(".rAmt").forEach(function(inp){
+      inp.addEventListener("input", function(){ rentalSchedule[+inp.dataset.idx].amount = +inp.value; });
+    });
+    body.querySelectorAll(".rmRowBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        rentalSchedule.splice(+btn.dataset.idx, 1);
+        renderRentalScheduleTable();
+      });
+    });
+  }
+
+  $("rAddChequeBtn").addEventListener("click", function(){
+    rentalSchedule.push({ due_date: $("rStart").value || "", amount: 0 });
+    renderRentalScheduleTable();
+  });
+
+  // "Split evenly" is a convenience STARTING POINT, not the only option —
+  // it replaces the current schedule with N evenly-spaced, evenly-sized
+  // cheques, which you can then hand-edit for cases like 50% on day 1
+  // and the rest ~3 months later.
+  $("rEvenSplitBtn").addEventListener("click", function(){
+    var start = $("rStart").value, end = $("rEnd").value;
+    var annualRent = +$("rAnnualRent").value;
+    var count = +$("rEvenSplitCount").value || 1;
+    if(!start || !end || !annualRent){
+      $("rentalErr").textContent = "Fill in contract start, end, and annual rent before splitting.";
+      return;
+    }
+    $("rentalErr").textContent = "";
     var startDate = new Date(start), endDate = new Date(end);
     var totalDays = (endDate - startDate) / (1000*60*60*24);
-    var schedule = [];
-    var amountPer = Math.round(annualRent / numCheques);
-    for(var i = 0; i < numCheques; i++){
-      var dueDate = new Date(startDate.getTime() + (totalDays * i / numCheques) * 24*60*60*1000);
-      schedule.push({ due_date: dueDate.toISOString().slice(0,10), amount: amountPer, paid: false });
+    var amountPer = Math.round(annualRent / count);
+    rentalSchedule = [];
+    for(var i = 0; i < count; i++){
+      var dueDate = new Date(startDate.getTime() + (totalDays * i / count) * 24*60*60*1000);
+      rentalSchedule.push({ due_date: dueDate.toISOString().slice(0,10), amount: amountPer });
     }
-    return schedule;
-  }
+    renderRentalScheduleTable();
+  });
 
   $("saveRentalBtn").addEventListener("click", async function(){
     var start = $("rStart").value, end = $("rEnd").value;
     var annualRent = +$("rAnnualRent").value;
-    var cheques = +$("rCheques").value || 1;
 
     if(!start || !end || !annualRent){
       $("rentalErr").textContent = "Contract start, end, and annual rent are required.";
@@ -849,9 +956,13 @@
       $("rentalErr").textContent = "Contract end must be after the start date.";
       return;
     }
+    if(rentalSchedule.length === 0){
+      $("rentalErr").textContent = "Add at least one payment — use \"Split evenly\" or \"+ Add cheque\".";
+      return;
+    }
 
     var user = (await sb.auth.getUser()).data.user;
-    var schedule = buildPaymentSchedule(start, end, annualRent, cheques);
+    var schedule = rentalSchedule.map(function(r){ return { due_date: r.due_date, amount: r.amount, paid: false }; });
 
     var res = await sb.from("rental_contracts").insert({
       property_id: currentRentalPropertyId,
@@ -871,6 +982,80 @@
     await loadProperties();
     loadCashflow();
   });
+
+  // ---- Off-plan payment schedule panel ----
+  var currentOffplanPropertyId = null;
+  var offplanSchedule = [];
+
+  function openOffplanPanel(propertyId){
+    currentOffplanPropertyId = propertyId;
+    var p = rows.filter(function(r){ return r.id === propertyId; })[0];
+    offplanSchedule = (p && p.offplan_payment_schedule) ? JSON.parse(JSON.stringify(p.offplan_payment_schedule)) : [];
+    renderOffplanScheduleTable();
+    $("offplanErr").textContent = "";
+    $("offplanPanel").style.display = "block";
+    $("offplanPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  $("cancelOffplanBtn").addEventListener("click", function(){
+    $("offplanPanel").style.display = "none";
+    currentOffplanPropertyId = null;
+  });
+
+  function renderOffplanScheduleTable(){
+    var body = $("oScheduleBody");
+    body.innerHTML = "";
+    offplanSchedule.forEach(function(row, idx){
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input type='text' class='oMilestone' data-idx='" + idx + "' value='" + (row.milestone||"") + "' placeholder='e.g. Booking (10%)'></td>" +
+        "<td><input type='date' class='oDate' data-idx='" + idx + "' value='" + (row.due_date||"") + "'></td>" +
+        "<td><input type='number' class='oAmt' data-idx='" + idx + "' value='" + (row.amount||0) + "'></td>" +
+        "<td><input type='checkbox' class='oPaid' data-idx='" + idx + "' " + (row.paid?"checked":"") + "></td>" +
+        "<td><button type='button' class='rmRowBtn' data-idx='" + idx + "'>Remove</button></td>";
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".oMilestone").forEach(function(inp){
+      inp.addEventListener("input", function(){ offplanSchedule[+inp.dataset.idx].milestone = inp.value; });
+    });
+    body.querySelectorAll(".oDate").forEach(function(inp){
+      inp.addEventListener("input", function(){ offplanSchedule[+inp.dataset.idx].due_date = inp.value; });
+    });
+    body.querySelectorAll(".oAmt").forEach(function(inp){
+      inp.addEventListener("input", function(){ offplanSchedule[+inp.dataset.idx].amount = +inp.value; });
+    });
+    body.querySelectorAll(".oPaid").forEach(function(inp){
+      inp.addEventListener("change", function(){ offplanSchedule[+inp.dataset.idx].paid = inp.checked; });
+    });
+    body.querySelectorAll(".rmRowBtn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        offplanSchedule.splice(+btn.dataset.idx, 1);
+        renderOffplanScheduleTable();
+      });
+    });
+  }
+
+  $("oAddMilestoneBtn").addEventListener("click", function(){
+    offplanSchedule.push({ milestone: "", due_date: "", amount: 0, paid: false });
+    renderOffplanScheduleTable();
+  });
+
+  $("saveOffplanBtn").addEventListener("click", async function(){
+    for(var i = 0; i < offplanSchedule.length; i++){
+      if(!offplanSchedule[i].due_date || !offplanSchedule[i].amount){
+        $("offplanErr").textContent = "Every milestone needs a due date and an amount.";
+        return;
+      }
+    }
+    var res = await sb.from("properties").update({ offplan_payment_schedule: offplanSchedule }).eq("id", currentOffplanPropertyId);
+    if(res.error){ $("offplanErr").textContent = "Could not save — try again."; console.error(res.error); return; }
+
+    $("offplanPanel").style.display = "none";
+    currentOffplanPropertyId = null;
+    await loadProperties();
+    loadCashflow();
+  });
+
 
   (async function init(){
     await loadProfileAndClients();

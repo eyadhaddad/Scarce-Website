@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Tracker — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap" style="max-width:1180px;margin:0 auto;padding:4px 16px 40px">
+<!-- Scarce Portfolio Tracker — new build (no Ghost predecessor).
+     Requires: a global `supabaseClient` already initialized on the page
+     (see docs/frontend-integration.md) and a logged-in user session.
+     This fragment reads/writes the `properties` table directly via
+     Supabase's client library — RLS enforces that a user only ever
+     sees their own rows, so no server-side gating is needed here
+     (unlike ratings/feasibility, there's no free/paid distinction
+     on your own portfolio — every logged-in user gets this tool). -->
+<div id="scarce-portfolio">
+  <div class="toolTitle">SCARCE <span>Portfolio Tracker</span></div>
+
+  <div class="summaryRow" id="summaryRow">
+    <div class="sCard"><div class="sVal" id="sCount">—</div><div class="sLbl">Properties</div></div>
+    <div class="sCard"><div class="sVal" id="sInvested">—</div><div class="sLbl">Total invested</div></div>
+    <div class="sCard"><div class="sVal" id="sSize">—</div><div class="sLbl">Total sqft</div></div>
+    <div class="sCard soon"><div class="sVal">Coming soon</div><div class="sLbl">Live market value</div></div>
+  </div>
+
+  <div class="card cashflowCard" id="cashflowCard">
+    <h2>Portfolio cash flow <span class="hint">across selected properties</span></h2>
+
+    <div class="cfControls">
+      <div class="cfGran">
+        <button class="granBtn on" data-g="monthly">Monthly</button>
+        <button class="granBtn" data-g="quarterly">Quarterly</button>
+        <button class="granBtn" data-g="annual">Annual</button>
+      </div>
+      <div class="cfFilterWrap">
+        <button class="filterToggle" id="filterToggle">Filter properties ▾</button>
+        <div class="filterDropdown" id="filterDropdown" style="display:none">
+          <label class="filterAll"><input type="checkbox" id="filterAllBox" checked> All properties</label>
+          <div id="filterList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cfSummary">
+      <div class="cfNum"><div class="cfLbl">Rent in</div><div class="cfVal in" id="cfRent">—</div></div>
+      <div class="cfNum"><div class="cfLbl">Mortgage out</div><div class="cfVal out" id="cfMortgage">—</div></div>
+      <div class="cfNum"><div class="cfLbl">Service charge</div><div class="cfVal out" id="cfService">—</div></div>
+      <div class="cfNum"><div class="cfLbl">Off-plan due</div><div class="cfVal out" id="cfOffplan">—</div></div>
+      <div class="cfNum total"><div class="cfLbl">Net this period</div><div class="cfVal" id="cfNet">—</div></div>
+    </div>
+
+    <div class="cfChartWrap">
+      <canvas id="cfChart"></canvas>
+      <div class="cfTip" id="cfTip"></div>
+    </div>
+    <div class="cfChartNote">Bars = net cash flow per period (teal = positive, red = negative) · gold line = cumulative</div>
+  </div>
+
+  <div class="card addCard">
+    <h2>Add a property</h2>
+    <div class="addGrid">
+      <div class="fld"><label>Community</label><input type="text" id="newCommunity" placeholder="e.g. Dubai Hills Estate"></div>
+      <div class="fld"><label>Label (optional)</label><input type="text" id="newLabel" placeholder="e.g. Unit 1204"></div>
+      <div class="fld"><label>Group (optional)</label><input type="text" id="newGroup" placeholder="e.g. Dubai properties"></div>
+      <div class="fld"><label>Status</label>
+        <select id="newStatus">
+          <option value="ready">Ready</option>
+          <option value="off_plan">Off-plan</option>
+        </select>
+      </div>
+      <div class="fld"><label>Purchase price (AED)</label><input type="number" id="newPrice" placeholder="1500000"></div>
+      <div class="fld"><label>Purchase date</label><input type="date" id="newDate"></div>
+      <div class="fld"><label>Size (sqft)</label><input type="number" id="newSize" placeholder="900"></div>
+      <div class="fld"><label>Service charge (AED/sqft/yr)</label><input type="number" id="newServiceCharge" placeholder="15"></div>
+      <div class="fld" id="clientFieldWrap">
+        <label>Client (optional — for tracking on someone else's behalf)</label>
+        <select id="newClient">
+          <option value="">— No client assigned —</option>
+        </select>
+        <button type="button" class="addClientBtn" id="addClientBtn">+ New client</button>
+      </div>
+    </div>
+    <button class="addBtn" id="addBtn">+ Add property</button>
+    <div class="newClientForm" id="newClientForm" style="display:none">
+      <div class="fld"><label>Client name</label><input type="text" id="clientName" placeholder="e.g. Ahmed Al Mansoori"></div>
+      <div class="fld"><label>Contact (email or phone)</label><input type="text" id="clientContact" placeholder="e.g. ahmed@email.com"></div>
+      <button class="addBtn" id="saveClientBtn">Save client</button>
+      <button class="cancelBtn" id="cancelClientBtn">Cancel</button>
+    </div>
+    <div class="addErr" id="addErr"></div>
+    <div class="offplanHint" id="offplanHint" style="display:none">
+      Off-plan payment milestones and mortgage details can be added from the property's row once it's created.
+    </div>
+  </div>
+
+  <div class="card clientsCard" id="clientsCard">
+    <h2>Your clients <span class="hint">for tracking properties you manage on someone else's behalf</span></h2>
+    <div class="clientsEmpty" id="clientsEmpty">No clients yet — add one from the "Add a property" form above, or below.</div>
+    <table class="clientsTable" id="clientsTable" style="display:none">
+      <thead><tr><th>Name</th><th>Contact</th><th>Properties</th></tr></thead>
+      <tbody id="clientsTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="listWrap" id="listWrap">
+    <p class="empty" id="emptyMsg">No properties yet — add your first one above.</p>
+    <table class="pTable" id="pTable" style="display:none">
+      <thead><tr><th>Community</th><th>Label</th><th>Group</th><th>Status</th><th>Purchase price</th><th>Date</th><th>Size</th><th>Client</th><th>Market value</th><th></th></tr></thead>
+      <tbody id="pTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="disc">Market value shows "coming soon" until live valuation data is connected. Figures here reflect what you entered, not verified transaction data.</div>
+</div>
+<style>
+#scarce-portfolio{--navy:#14181C;--ink:#2A2F35;--teal:#0E9B96;--teal-deep:#0B7A76;--gold:#C9952B;--red:#C0392B;--green:#1F7A4D;--cream:#FAF8F4;--line:#ECE9E3;--grey:#7A7F87;--white:#fff;--mid:#F4F1EB;
+  background:var(--cream);color:var(--ink);font:13.5px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;padding:4px 2px 20px;box-sizing:border-box}
+#scarce-portfolio *{box-sizing:border-box}
+#scarce-portfolio .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:0 0 14px}
+#scarce-portfolio .toolTitle span{color:var(--teal);font-style:italic}
+#scarce-portfolio .summaryRow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:640px){#scarce-portfolio .summaryRow{grid-template-columns:1fr 1fr}}
+#scarce-portfolio .sCard{background:var(--navy);border-radius:10px;padding:12px;text-align:center}
+#scarce-portfolio .sCard.soon{background:var(--mid)}
+#scarce-portfolio .sCard.soon .sVal{color:var(--grey);font-size:13px}
+#scarce-portfolio .sVal{font-size:20px;font-weight:800;color:#fff}
+#scarce-portfolio .sLbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#B9BDC2;margin-top:3px}
+#scarce-portfolio .sCard.soon .sLbl{color:var(--grey)}
+#scarce-portfolio .card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+#scarce-portfolio .card h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:12px}
+#scarce-portfolio .card h2 .hint{text-transform:none;letter-spacing:0;font-weight:600;color:var(--grey);font-size:10.5px;margin-left:6px}
+#scarce-portfolio .cashflowCard{background:var(--navy)}
+#scarce-portfolio .cashflowCard h2{color:var(--gold)}
+#scarce-portfolio .cfSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:760px){#scarce-portfolio .cfSummary{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:460px){#scarce-portfolio .cfSummary{grid-template-columns:1fr 1fr}}
+#scarce-portfolio .cfNum{text-align:center;padding:8px;border-radius:8px;background:rgba(255,255,255,.06)}
+#scarce-portfolio .cfNum.total{background:var(--teal)}
+#scarce-portfolio .cfLbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#B9BDC2}
+#scarce-portfolio .cfVal{font-size:17px;font-weight:800;color:#fff;margin-top:2px}
+#scarce-portfolio .cfVal.in{color:#7FD6C9}
+#scarce-portfolio .cfVal.out{color:#F0A87A}
+#scarce-portfolio .statusBadge{font-size:10px;font-weight:800;letter-spacing:.03em;padding:2px 8px;border-radius:10px;color:#fff}
+#scarce-portfolio .statusBadge.ready{background:var(--teal-deep)}
+#scarce-portfolio .statusBadge.off_plan{background:var(--gold)}
+#scarce-portfolio .offplanHint{font-size:11.5px;color:var(--grey);font-style:italic;margin-top:8px}
+#scarce-portfolio .cfControls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+#scarce-portfolio .cfGran{display:flex;gap:5px}
+#scarce-portfolio .granBtn{padding:6px 14px;border:1px solid rgba(255,255,255,.2);border-radius:7px;background:transparent;color:#B9BDC2;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+#scarce-portfolio .granBtn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+#scarce-portfolio .cfFilterWrap{position:relative}
+#scarce-portfolio .filterToggle{padding:6px 14px;border:1px solid rgba(255,255,255,.2);border-radius:7px;background:transparent;color:#B9BDC2;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+#scarce-portfolio .filterDropdown{position:absolute;right:0;top:36px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:220px;box-shadow:0 10px 24px rgba(0,0,0,.2);z-index:10}
+#scarce-portfolio .filterDropdown label{display:block;font-size:12.5px;color:var(--navy);font-weight:600;padding:4px 0;cursor:pointer}
+#scarce-portfolio .filterDropdown input{margin-right:7px}
+#scarce-portfolio .filterAll{border-bottom:1px solid var(--line);margin-bottom:6px;padding-bottom:8px!important}
+#scarce-portfolio .cfChartWrap{position:relative;margin-top:6px;background:rgba(255,255,255,.04);border-radius:8px;padding:8px}
+#scarce-portfolio #cfChart{width:100%;height:180px;display:block;cursor:crosshair}
+#scarce-portfolio .cfTip{position:absolute;pointer-events:none;background:#fff;color:var(--navy);font-size:11.5px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:5;transform:translate(-50%,-115%);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+#scarce-portfolio .cfTip.on{opacity:1}
+#scarce-portfolio .cfChartNote{font-size:10.5px;color:#8B9299;margin-top:8px}
+#scarce-portfolio .addClientBtn{margin-top:6px;background:none;border:1px solid var(--teal);color:var(--teal-deep);font:inherit;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer}
+#scarce-portfolio .newClientForm{margin-top:12px;padding:12px;background:var(--mid);border-radius:8px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end}
+@media(max-width:640px){#scarce-portfolio .newClientForm{grid-template-columns:1fr}}
+#scarce-portfolio .cancelBtn{background:none;border:1px solid var(--line);color:var(--grey);font:inherit;font-weight:700;font-size:13px;padding:9px 14px;border-radius:8px;cursor:pointer}
+#scarce-portfolio .clientsCard{}
+#scarce-portfolio .clientsEmpty{color:var(--grey);font-style:italic;font-size:12.5px}
+#scarce-portfolio .clientsTable{width:100%;border-collapse:collapse;font-size:13px}
+#scarce-portfolio .clientsTable th{background:var(--navy);color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:8px 10px;font-weight:700}
+#scarce-portfolio .clientsTable td{padding:8px 10px;border-bottom:1px solid var(--line)}
+#scarce-portfolio .addGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:760px){#scarce-portfolio .addGrid{grid-template-columns:1fr 1fr}}
+#scarce-portfolio .fld label{display:block;font-size:11px;color:var(--grey);font-weight:600;margin-bottom:4px}
+#scarce-portfolio .fld input{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:var(--cream);color:var(--navy);font-weight:600}
+#scarce-portfolio .fld input:focus{outline:2px solid var(--teal);outline-offset:1px}
+#scarce-portfolio .addBtn{margin-top:12px;background:var(--teal);color:#fff;border:none;font:inherit;font-weight:700;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer}
+#scarce-portfolio .addBtn:hover{background:var(--teal-deep)}
+#scarce-portfolio .addErr{color:var(--red);font-size:12px;margin-top:8px}
+#scarce-portfolio .empty{color:var(--grey);font-style:italic;text-align:center;padding:20px}
+#scarce-portfolio .pTable{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#scarce-portfolio .pTable th{background:var(--navy);color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:9px 12px;font-weight:700}
+#scarce-portfolio .pTable td{padding:9px 12px;border-bottom:1px solid var(--line)}
+#scarce-portfolio .pTable tr:last-child td{border-bottom:0}
+#scarce-portfolio .delBtn{background:none;border:none;color:var(--red);cursor:pointer;font-weight:700;font-size:12px}
+#scarce-portfolio .disc{font-size:11px;color:var(--grey);font-style:italic;margin-top:6px;line-height:1.4}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+  window.SCARCE_FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  initAuthTopbar(sb);
+
+  // Portfolio Tracker requires being logged in (any tier — this tool
+  // isn't paid-gated), unlike Ratings/Feasibility which gate on tier.
+  // Anonymous visitors get sent straight to sign in rather than seeing
+  // an empty/broken tool.
+  sb.auth.getSession().then(function(res){
+    if(!res.data.session){
+      window.location.href = "auth.html";
+    }
+  });
+})();
+</script>
+<script>
+(function(){
+  var W = document.getElementById("scarce-portfolio");
+  if(!W) return;
+
+  // Assumes `supabaseClient` is already created on the page:
+  //   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  // and the user is already logged in via Supabase Auth.
+  var sb = window.supabaseClient;
+  if(!sb){ W.innerHTML = '<p style="color:#C0392B">Portfolio tracker requires login. Please sign in.</p>'; return; }
+
+  function $(id){ return W.querySelector("#"+id); }
+  function AED(n){ return "AED " + Math.round(n).toLocaleString("en-AE"); }
+
+  var rows = [];
+  var clients = [];
+  var isPaidTier = false; // controls branding on exports only — clients/grouping are available to everyone
+  var granularity = "monthly";
+  var selectedPropertyIds = null; // null = all properties
+  var lastCashflowData = null;
+
+  async function loadProfileAndClients(){
+    var user = (await sb.auth.getUser()).data.user;
+    if(!user) return;
+    var profRes = await sb.from("profiles").select("tier").eq("id", user.id).single();
+    isPaidTier = profRes.data && profRes.data.tier === "paid";
+
+    // Clients and grouping are available to every user — no role gate.
+    var cRes = await sb.from("clients").select("*").eq("user_id", user.id).order("name");
+    clients = cRes.data || [];
+    renderClientOptions();
+    renderClientsCard();
+  }
+
+  function renderClientOptions(){
+    var sel = $("newClient");
+    sel.innerHTML = '<option value="">— No client assigned —</option>';
+    clients.forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = c.id; opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderClientsCard(){
+    if(clients.length === 0){
+      $("clientsEmpty").style.display = "block";
+      $("clientsTable").style.display = "none";
+      return;
+    }
+    $("clientsEmpty").style.display = "none";
+    $("clientsTable").style.display = "table";
+    var body = $("clientsTableBody");
+    body.innerHTML = "";
+    clients.forEach(function(c){
+      var propCount = rows.filter(function(r){ return r.client_id === c.id; }).length;
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + c.name + "</td>" +
+        "<td>" + (c.contact_email || c.contact_phone || "—") + "</td>" +
+        "<td>" + propCount + "</td>";
+      body.appendChild(tr);
+    });
+  }
+
+  $("addClientBtn").addEventListener("click", function(){
+    $("newClientForm").style.display = "grid";
+  });
+  $("cancelClientBtn").addEventListener("click", function(){
+    $("newClientForm").style.display = "none";
+  });
+  $("saveClientBtn").addEventListener("click", async function(){
+    var name = $("clientName").value.trim();
+    if(!name){ alert("Client name is required."); return; }
+    var user = (await sb.auth.getUser()).data.user;
+    var contact = $("clientContact").value.trim();
+    var isEmail = contact.indexOf("@") !== -1;
+    var res = await sb.from("clients").insert({
+      user_id: user.id,
+      name: name,
+      contact_email: isEmail ? contact : null,
+      contact_phone: !isEmail ? contact : null
+    }).select().single();
+    if(res.error){ alert("Could not save client — try again."); console.error(res.error); return; }
+    clients.push(res.data);
+    renderClientOptions();
+    renderClientsCard();
+    $("newClient").value = res.data.id;
+    $("clientName").value = ""; $("clientContact").value = "";
+    $("newClientForm").style.display = "none";
+  });
+
+  function AEDsigned(n){
+    var s = n >= 0 ? "+" : "-";
+    return s + AED(Math.abs(n));
+  }
+
+  async function loadCashflow(){
+    var session = (await sb.auth.getSession()).data.session;
+    if(!session) return;
+    try{
+      var res = await fetch(window.SCARCE_FUNCTIONS_URL + "/get-portfolio-cashflow", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyIds: selectedPropertyIds, granularity: granularity })
+      });
+      var data = await res.json();
+      lastCashflowData = data;
+
+      var latest = data.timeline[data.timeline.length - 1] || data.currentMonthBreakdown;
+      $("cfRent").textContent = AED(latest.rentIn);
+      $("cfMortgage").textContent = "-" + AED(latest.mortgageOut);
+      $("cfService").textContent = "-" + AED(latest.serviceChargeOut);
+      $("cfOffplan").textContent = "-" + AED(latest.offplanOut);
+      $("cfNet").textContent = AEDsigned(latest.net);
+
+      drawCashflowChart(data.timeline);
+    } catch(e){ console.error("Cashflow load failed:", e); }
+  }
+
+  // ---- Granularity toggle ----
+  W.querySelectorAll(".granBtn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      W.querySelectorAll(".granBtn").forEach(function(b){ b.classList.remove("on"); });
+      btn.classList.add("on");
+      granularity = btn.dataset.g;
+      loadCashflow();
+    });
+  });
+
+  // ---- Property filter dropdown ----
+  $("filterToggle").addEventListener("click", function(){
+    var dd = $("filterDropdown");
+    dd.style.display = dd.style.display === "none" ? "block" : "none";
+  });
+  document.addEventListener("click", function(e){
+    if(!W.contains(e.target)) return;
+    if(!$("filterDropdown").contains(e.target) && e.target !== $("filterToggle")){
+      $("filterDropdown").style.display = "none";
+    }
+  });
+
+  function renderFilterList(){
+    var list = $("filterList");
+    list.innerHTML = "";
+    rows.forEach(function(r){
+      var label = document.createElement("label");
+      var name = r.property_label ? (r.community_name + " — " + r.property_label) : r.community_name;
+      label.innerHTML = '<input type="checkbox" class="propFilterBox" data-id="' + r.id + '" checked> ' + name;
+      list.appendChild(label);
+    });
+
+    $("filterAllBox").addEventListener("change", function(){
+      var checked = this.checked;
+      W.querySelectorAll(".propFilterBox").forEach(function(box){ box.checked = checked; });
+      applyFilter();
+    });
+    W.querySelectorAll(".propFilterBox").forEach(function(box){
+      box.addEventListener("change", function(){
+        var allBoxes = W.querySelectorAll(".propFilterBox");
+        var allChecked = Array.prototype.every.call(allBoxes, function(b){ return b.checked; });
+        $("filterAllBox").checked = allChecked;
+        applyFilter();
+      });
+    });
+  }
+
+  function applyFilter(){
+    var allBoxes = W.querySelectorAll(".propFilterBox");
+    var checkedIds = Array.prototype.filter.call(allBoxes, function(b){ return b.checked; })
+      .map(function(b){ return b.dataset.id; });
+    var allChecked = checkedIds.length === allBoxes.length;
+    selectedPropertyIds = allChecked ? null : checkedIds;
+    loadCashflow();
+  }
+
+  // ---- Chart drawing (same bar + cumulative-line pattern as the Feasibility Study tool) ----
+  var _bars = [];
+  function drawCashflowChart(data){
+    var cv = $("cfChart");
+    if(!cv || !data || !data.length) return;
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = cv.clientWidth || cv.parentElement.clientWidth || 600, cssH = 180;
+    cv.width = cssW * dpr; cv.height = cssH * dpr;
+    var ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    var padL = 8, padR = 8, padT = 14, padB = 22;
+    var w = cssW - padL - padR, h = cssH - padT - padB;
+
+    var nets = data.map(function(d){ return d.net; });
+    var cum = 0, cums = data.map(function(d){ cum += d.net; return cum; });
+
+    var maxV = Math.max.apply(null, nets.concat(cums, [0]));
+    var minV = Math.min.apply(null, nets.concat(cums, [0]));
+    if(maxV === minV){ maxV += 1; minV -= 1; }
+    var pad = (maxV - minV) * 0.15; maxV += pad; minV -= pad;
+    function Y(v){ return padT + (maxV - v) / (maxV - minV) * h; }
+    var zeroY = Y(0);
+
+    ctx.strokeStyle = "rgba(255,255,255,.15)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(padL + w, zeroY); ctx.stroke();
+
+    var n = data.length, bw = Math.max(2, w / n * 0.6), gap = w / n;
+    _bars = [];
+    for(var i = 0; i < n; i++){
+      var cx = padL + gap * i + gap / 2;
+      var v = nets[i]; var y0 = Y(0), y1 = Y(v);
+      var top = Math.min(y0, y1), hgt = Math.max(Math.abs(y1 - y0), 0.5);
+      ctx.fillStyle = v >= 0 ? "#0E9B96" : "#C0392B";
+      ctx.fillRect(cx - bw / 2, top, bw, hgt);
+      _bars.push({ x: cx, x0: cx - gap / 2, x1: cx + gap / 2, d: data[i], cum: cums[i] });
+    }
+
+    ctx.strokeStyle = "#C9952B"; ctx.lineWidth = 2; ctx.beginPath();
+    for(var j = 0; j < n; j++){
+      var cx2 = padL + gap * j + gap / 2, y = Y(cums[j]);
+      j ? ctx.lineTo(cx2, y) : ctx.moveTo(cx2, y);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "#8B9299"; ctx.font = "10px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign = "center";
+    var step = Math.max(1, Math.ceil(n / 8));
+    for(var k = 0; k < n; k += step){
+      var cx3 = padL + gap * k + gap / 2;
+      ctx.fillText(String(data[k].month), cx3, cssH - 7);
+    }
+  }
+
+  (function(){
+    var cv = $("cfChart"), tip = $("cfTip");
+    if(!cv) return;
+    cv.addEventListener("mousemove", function(e){
+      var rect = cv.getBoundingClientRect(); var mx = e.clientX - rect.left;
+      var hit = null;
+      for(var i = 0; i < _bars.length; i++){
+        if(mx >= _bars[i].x0 && mx <= _bars[i].x1){ hit = _bars[i]; break; }
+      }
+      if(hit){
+        tip.classList.add("on");
+        tip.style.left = hit.x + "px"; tip.style.top = "14px";
+        tip.innerHTML = hit.d.month + ": <b>" + AEDsigned(hit.d.net) + "</b><br>cumulative: " + AEDsigned(hit.cum);
+      } else tip.classList.remove("on");
+    });
+    cv.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  })();
+  window.addEventListener("resize", function(){
+    if(lastCashflowData) drawCashflowChart(lastCashflowData.timeline);
+  });
+
+  $("newStatus").addEventListener("change", function(){
+    $("offplanHint").style.display = this.value === "off_plan" ? "block" : "none";
+  });
+
+  async function loadProperties(){
+    var user = (await sb.auth.getUser()).data.user;
+    if(!user){ W.innerHTML = '<p style="color:#C0392B">Please sign in to view your portfolio.</p>'; return; }
+
+    var res = await sb.from("properties")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if(res.error){ console.error(res.error); return; }
+    rows = res.data;
+    render();
+    renderFilterList();
+    renderClientsCard();
+  }
+
+  function render(){
+    var count = rows.length;
+    var invested = rows.reduce(function(sum, r){ return sum + (r.purchase_price || 0); }, 0);
+    var size = rows.reduce(function(sum, r){ return sum + (r.size_sqft || 0); }, 0);
+
+    $("sCount").textContent = count;
+    $("sInvested").textContent = AED(invested);
+    $("sSize").textContent = size ? size.toLocaleString("en-AE") + " sqft" : "—";
+
+    if(count === 0){
+      $("emptyMsg").style.display = "block";
+      $("pTable").style.display = "none";
+      return;
+    }
+    $("emptyMsg").style.display = "none";
+    $("pTable").style.display = "table";
+
+    var body = $("pTableBody");
+    body.innerHTML = "";
+    rows.forEach(function(r){
+      var tr = document.createElement("tr");
+      var statusLabel = r.status === "off_plan" ? "Off-plan" : "Ready";
+      var clientName = "—";
+      if(r.client_id){
+        var match = clients.filter(function(c){ return c.id === r.client_id; })[0];
+        clientName = match ? match.name : "—";
+      }
+      tr.innerHTML =
+        "<td>" + (r.community_name || "—") + "</td>" +
+        "<td>" + (r.property_label || "—") + "</td>" +
+        "<td>" + (r.group_label || "—") + "</td>" +
+        "<td><span class='statusBadge " + r.status + "'>" + statusLabel + "</span></td>" +
+        "<td>" + AED(r.purchase_price) + "</td>" +
+        "<td>" + (r.purchase_date || "—") + "</td>" +
+        "<td>" + (r.size_sqft ? r.size_sqft.toLocaleString("en-AE") + " sqft" : "—") + "</td>" +
+        "<td>" + clientName + "</td>" +
+        "<td>Coming soon</td>" +
+        "<td><button class='delBtn' data-id='" + r.id + "'>Remove</button></td>";
+      body.appendChild(tr);
+    });
+
+    W.querySelectorAll(".delBtn").forEach(function(btn){
+      btn.addEventListener("click", async function(){
+        if(!confirm("Remove this property from your portfolio?")) return;
+        await sb.from("properties").delete().eq("id", btn.dataset.id);
+        loadProperties();
+      });
+    });
+  }
+
+  $("addBtn").addEventListener("click", async function(){
+    var community = $("newCommunity").value.trim();
+    var price = +$("newPrice").value;
+    $("addErr").textContent = "";
+
+    if(!community){ $("addErr").textContent = "Community name is required."; return; }
+    if(!price || price <= 0){ $("addErr").textContent = "Enter a valid purchase price."; return; }
+
+    var user = (await sb.auth.getUser()).data.user;
+    if(!user){ $("addErr").textContent = "Please sign in."; return; }
+
+    var res = await sb.from("properties").insert({
+      user_id: user.id,
+      community_name: community,
+      property_label: $("newLabel").value.trim() || null,
+      group_label: $("newGroup").value.trim() || null,
+      status: $("newStatus").value,
+      purchase_price: price,
+      purchase_date: $("newDate").value || null,
+      size_sqft: +$("newSize").value || null,
+      service_charge_psf: +$("newServiceCharge").value || null,
+      client_id: $("newClient").value || null
+    });
+
+    if(res.error){ $("addErr").textContent = "Could not save — try again."; console.error(res.error); return; }
+
+    $("newCommunity").value = "";
+    $("newLabel").value = "";
+    $("newGroup").value = "";
+    $("newPrice").value = "";
+    $("newDate").value = "";
+    $("newSize").value = "";
+    $("newServiceCharge").value = "";
+    $("newClient").value = "";
+    await loadProperties();
+    renderClientsCard();
+  });
+
+  (async function init(){
+    await loadProfileAndClients();
+    await loadProperties();
+    loadCashflow();
+  })();
+})();
+</script>
+  </div>
+</body>
+</html>

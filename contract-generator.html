@@ -112,7 +112,7 @@
 
     $("cg").innerHTML =
       '<div class="toolTitle">SCARCE <span>Contract Generator</span></div>'+
-      '<div class="disclaimer"><b>Not legal advice.</b> This generates a document matching the standard Dubai (Ejari) or Abu Dhabi (Tawtheeq) tenancy contract format for your own use — verify current requirements with the relevant authority (Dubai Land Department / Abu Dhabi Municipality) before relying on it, and have it reviewed if needed.</div>'+
+      '<div class="disclaimer">This tool helps you draft an initial contract before preparing the official one in line with the applicable requirement. <b>It is not legal advice.</b> Verify current requirements with the relevant authority (Dubai Land Department / Abu Dhabi Municipality) before relying on it, and have it reviewed if needed.</div>'+
       '<div class="typeTabs">'+
         '<div class="typeTab on" data-type="rera_dubai">Dubai (Ejari)</div>'+
         '<div class="typeTab" data-type="tawtheeq_abu_dhabi">Abu Dhabi (Tawtheeq)</div>'+
@@ -333,7 +333,7 @@
     var list;
     try { list = JSON.parse(r.additional_terms); } catch(e) { return ""; }
     if(!list || !list.length) return "";
-    return "<table class='section-title'><tr><td>Additional Terms — شروط إضافية</td></tr></table>"+
+    return "<table class='section-title'><tr><td>Additional Terms</td><td class='ar'>شروط إضافية</td></tr></table>"+
       list.map(function(c, i){ return "<div class='clause'>"+(i+1)+". "+esc(c)+"</div>"; }).join("");
   }
 
@@ -357,7 +357,10 @@
          ["Property Type", "نوع العقار", r.extra_fields.propertyType], ["No. of Parking", "عدد مواقف السيارات", r.extra_fields.parkingCount]];
 
     function row(en, ar, val){
-      return "<tr><td class='lbl'>"+en+" / "+ar+"</td><td>"+esc(val||"—")+"</td></tr>";
+      return "<tr><td class='lbl'>"+en+"</td><td>"+esc(val||"—")+"</td><td class='lbl ar'>"+ar+"</td></tr>";
+    }
+    function sectionHeader(en, ar){
+      return "<table class='section-title'><tr><td>"+en+"</td><td class='ar'>"+ar+"</td></tr></table>";
     }
 
     var html = "<html><head><meta charset='UTF-8'><title>"+title+"</title><style>"+
@@ -367,8 +370,10 @@
       ".renewalNote{background:#FDF3EA;border-left:3px solid #D9772F;padding:8px 12px;font-size:12px;margin:12px 0}"+
       "table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px}"+
       "table.section-title td{background:#14181C;color:#fff;font-weight:700;padding:6px 10px}"+
+      "table.section-title td.ar{text-align:right;direction:rtl}"+
       "td{border:1px solid #ddd;padding:6px 10px}"+
-      "td.lbl{background:#f4f1eb;font-weight:700;width:38%}"+
+      "td.lbl{background:#f4f1eb;font-weight:700;width:28%}"+
+      "td.lbl.ar{text-align:right;direction:rtl}"+
       ".clause{margin-bottom:10px;font-size:11.5px;line-height:1.5}"+
       ".clause .ar{direction:rtl;text-align:right;color:#333;margin-top:2px;display:block}"+
       ".sig{display:flex;justify-content:space-between;margin-top:40px;font-size:12px}"+
@@ -378,7 +383,7 @@
       "</style></head><body>"+
       "<h1>"+title+"<span class='ar'>"+titleAr+"</span></h1>"+
       (r.is_renewal ? "<div class='renewalNote'>This is a <b>renewal</b> of a previous tenancy contract between the same parties.</div>" : "") +
-      "<table class='section-title'><tr><td>Contract Details / تفاصيل العقد</td></tr></table>"+
+      sectionHeader("Contract Details", "تفاصيل العقد")+
       "<table>"+
         row("Start Date","تاريخ البداية", r.contract_start)+
         row("End Date","تاريخ النهاية", r.contract_end)+
@@ -386,19 +391,19 @@
         row("Security Deposit (AED)","مبلغ التأمين", r.security_deposit)+
         row("Payment Terms","طريقة السداد", r.payment_terms)+
       "</table>"+
-      "<table class='section-title'><tr><td>Property Details / تفاصيل العقار</td></tr></table>"+
+      sectionHeader("Property Details", "تفاصيل العقار")+
       "<table>"+ propRows.map(function(pr){ return row(pr[0], pr[1], pr[2]); }).join("") +"</table>"+
-      "<table class='section-title'><tr><td>Lessor / Landlord Details — تفاصيل المؤجر</td></tr></table>"+
+      sectionHeader("Lessor / Landlord Details", "تفاصيل المؤجر")+
       "<table>"+
         row("Full Name","الاسم بالكامل", r.landlord_name)+
         row("ID / License No.","رقم الهوية", r.landlord_id_number)+
       "</table>"+
-      "<table class='section-title'><tr><td>Tenant Details — تفاصيل المستأجر</td></tr></table>"+
+      sectionHeader("Tenant Details", "تفاصيل المستأجر")+
       "<table>"+
         row("Full Name","الاسم بالكامل", r.tenant_name)+
         row("Emirates ID No.","رقم الهوية الإماراتية", r.tenant_id_number)+
       "</table>"+
-      "<table class='section-title'><tr><td>General Terms and Conditions — الأحكام والشروط العامة</td></tr></table>"+
+      sectionHeader("General Terms and Conditions", "الأحكام والشروط العامة")+
       terms.en.map(function(clause, i){
         return "<div class='clause'>"+(i+1)+". "+esc(clause)+(terms.ar?"<span class='ar'>"+(i+1)+". "+esc(terms.ar[i])+"</span>":"")+"</div>";
       }).join("")+

@@ -70,8 +70,11 @@ function makeCollapsible(headEl, bodyEl, startCollapsed) {
  *   initAuthTopbar(sb);
  *
  * If logged in: turns the "Sign in" link into a working "Sign out"
- * button. If not logged in: leaves it as "Sign in" pointing at
- * auth.html, unchanged.
+ * button, AND inserts an "Account" link right before it (pointing at
+ * branding-settings.html) — account-level settings live here, in one
+ * shared place available from every page, rather than as a tile
+ * mixed in with the actual task-oriented tools on the home page.
+ * If not logged in: leaves everything as "Sign in", unchanged.
  */
 async function initAuthTopbar(supabaseClient) {
   var link = document.querySelector(".topbar .signin");
@@ -85,6 +88,23 @@ async function initAuthTopbar(supabaseClient) {
       await supabaseClient.auth.signOut();
       window.location.href = "index.html";
     });
+
+    var accountLink = document.createElement("a");
+    accountLink.className = "accountLink";
+    accountLink.href = "branding-settings.html";
+    accountLink.textContent = "Account";
+
+    // Wrap Account + Sign out together so they stay grouped on the
+    // right — inserting accountLink as a bare third sibling would
+    // spread across the topbar's space-between layout instead of
+    // sitting next to the sign-out button.
+    var wrap = document.createElement("div");
+    wrap.style.display = "flex";
+    wrap.style.alignItems = "center";
+    wrap.style.gap = "12px";
+    link.parentNode.insertBefore(wrap, link);
+    wrap.appendChild(accountLink);
+    wrap.appendChild(link);
   }
 }
 

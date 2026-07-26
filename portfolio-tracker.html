@@ -215,7 +215,16 @@
 #scarce-portfolio .card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
 #scarce-portfolio .card h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:12px}
 #scarce-portfolio .card h2 .hint{text-transform:none;letter-spacing:0;font-weight:600;color:var(--grey);font-size:10.5px;margin-left:6px}
-#scarce-portfolio .cashflowCard{background:var(--navy)}
+#scarce-portfolio .cashflowCard{background:var(--navy);color:#fff}
+
+/* The schedule table is shared with the (white-background) Rental
+   and Off-plan panels — its default colors assume a light card. When
+   it sits inside the dark cashflowCard specifically, it needs its
+   own light-on-dark treatment instead, or the text is nearly
+   invisible against the navy background. */
+#scarce-portfolio .cashflowCard .scheduleTable th{background:rgba(255,255,255,.08);color:#fff}
+#scarce-portfolio .cashflowCard .scheduleTable td{color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+#scarce-portfolio .cashflowCard .scheduleTable tbody tr:nth-child(even){background:rgba(255,255,255,.03)}
 #scarce-portfolio .cashflowCard h2{color:var(--gold)}
 #scarce-portfolio .cfSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 @media(max-width:760px){#scarce-portfolio .cfSummary{grid-template-columns:1fr 1fr 1fr}}

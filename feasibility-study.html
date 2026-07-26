@@ -54,6 +54,24 @@
   .chartWrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
   .chartWrap h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px}
   #cfChartRental{width:100%;height:200px;display:block}
+  .granBtnFs{background:transparent;border:1px solid var(--line);color:var(--grey);font:inherit;font-size:10.5px;font-weight:700;
+    padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:5px}
+  .granBtnFs.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+  .tableWrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .tableWrap .tableHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .tableWrap h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:800;margin:0}
+  .exportBtns{display:flex;gap:8px}
+  .exportBtn{background:var(--mid);border:1px solid var(--line);color:var(--navy);font:inherit;font-size:11.5px;font-weight:700;
+    padding:6px 12px;border-radius:7px;cursor:pointer}
+  .exportBtn:hover{background:var(--line)}
+  .cfTable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .cfTable th{background:var(--navy);color:#fff;text-align:right;padding:7px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;font-weight:700}
+  .cfTable th:first-child{text-align:left}
+  .cfTable td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line);color:var(--ink)}
+  .cfTable td:first-child{text-align:left;font-weight:700;color:var(--navy)}
+  .cfTable td.neg{color:var(--red)}
+  .cfTable tbody tr:hover{background:var(--cream)}
 
   .rGate{background:var(--navy);border-radius:14px;padding:40px 30px;color:#fff;text-align:center;max-width:520px;margin:60px auto}
   .rGate h3{font-size:19px;font-weight:800;margin-bottom:8px}
@@ -73,6 +91,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="shared.js"></script>
 <script>
 (function(){
@@ -232,15 +251,43 @@
     };
   }
 
-  function drawCashflowChart(canvas, yearly){
+  // Buckets the raw monthly array (already computed by the backend)
+  // into whatever granularity is requested. Purely client-side — no
+  // extra API call needed, since the full monthly detail is already
+  // in the response from calculate-feasibility.
+  function bucketFeasibility(monthlyArr, size, labelFn){
+    var buckets = [];
+    for(var i=0;i<monthlyArr.length;i+=size){
+      var slice = monthlyArr.slice(i, i+size);
+      if(!slice.length) continue;
+      var cf = slice.reduce(function(s,m){ return s+m.cf; }, 0);
+      buckets.push({ label: labelFn(slice[0]), cf: cf });
+    }
+    var cum=0;
+    buckets.forEach(function(b){ cum += b.cf; b.cum = cum; });
+    return buckets;
+  }
+
+  function getBucketedData(result, granularity){
+    if(granularity === "annual"){
+      return result.yearly.map(function(y){ return { label: "Y"+y.y, cf: y.cf, cum: y.cum }; });
+    }
+    if(granularity === "quarterly"){
+      return bucketFeasibility(result.monthly, 3, function(first){ return "Y"+first.y+"Q"+Math.ceil(first.m/3); });
+    }
+    // monthly
+    return bucketFeasibility(result.monthly, 1, function(first){ return "Y"+first.y+"M"+first.m; });
+  }
+
+  function drawCashflowChart(canvas, data){
     var dpr = window.devicePixelRatio || 1;
     var cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 600, cssH = 200;
     canvas.width = cssW*dpr; canvas.height = cssH*dpr;
     var ctx = canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,cssW,cssH);
     var padL=8,padR=8,padT=10,padB=20,w=cssW-padL-padR,h=cssH-padT-padB;
-    var cfs = yearly.map(function(y){ return y.cf; });
-    var cum=0, cums = yearly.map(function(y){ cum+=y.cf; return cum; });
+    var cfs = data.map(function(d){ return d.cf; });
+    var cums = data.map(function(d){ return d.cum; });
     var maxV = Math.max.apply(null, cfs.concat(cums,[0])), minV = Math.min.apply(null, cfs.concat(cums,[0]));
     if(maxV===minV){maxV+=1;minV-=1;}
     var pad=(maxV-minV)*0.15; maxV+=pad; minV-=pad;
@@ -248,7 +295,7 @@
     var zeroY=Y(0);
     ctx.strokeStyle="rgba(20,24,28,.15)"; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(padL,zeroY); ctx.lineTo(padL+w,zeroY); ctx.stroke();
-    var n=yearly.length, bw=Math.max(4,w/n*0.5), gap=w/n;
+    var n=data.length, bw=Math.max(2,w/n*0.5), gap=w/n;
     for(var i=0;i<n;i++){
       var cx=padL+gap*i+gap/2, v=cfs[i], y0=Y(0), y1=Y(v);
       var top=Math.min(y0,y1), hgt=Math.max(Math.abs(y1-y0),0.5);
@@ -259,10 +306,77 @@
     for(var j=0;j<n;j++){ var cx2=padL+gap*j+gap/2, y=Y(cums[j]); j?ctx.lineTo(cx2,y):ctx.moveTo(cx2,y); }
     ctx.stroke();
     ctx.fillStyle="#7A7F87"; ctx.font="10px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign="center";
-    for(var k=0;k<n;k++){ var cx3=padL+gap*k+gap/2; ctx.fillText("Y"+yearly[k].y, cx3, cssH-6); }
+    var step = Math.max(1, Math.ceil(n/10));
+    for(var k=0;k<n;k+=step){ var cx3=padL+gap*k+gap/2; ctx.fillText(data[k].label, cx3, cssH-6); }
+  }
+
+  // ---- Table + export functions (used for the Cash Flow Detail table) ----
+
+  function getTableData(result, granularity){
+    if(granularity === "annual"){
+      var headers = ["Year","Rent Collected (AED)","NOI (AED)","Debt Service (AED)","Net Cash Flow (AED)","Cumulative (AED)"];
+      var rows = result.yearly.map(function(y){
+        return ["Y"+y.y, Math.round(y.rent||0), Math.round(y.noi||0), Math.round(y.debt||0), Math.round(y.cf), Math.round(y.cum)];
+      });
+      return { headers: headers, rows: rows };
+    }
+    var size = granularity === "quarterly" ? 3 : 1;
+    var labelFn = granularity === "quarterly"
+      ? function(first){ return "Y"+first.y+" Q"+Math.ceil(first.m/3); }
+      : function(first){ return "Y"+first.y+" M"+first.m; };
+    var bucketed = bucketFeasibility(result.monthly, size, labelFn);
+    var headers = ["Period","Net Cash Flow (AED)","Cumulative (AED)"];
+    var rows = bucketed.map(function(b){ return [b.label, Math.round(b.cf), Math.round(b.cum)]; });
+    return { headers: headers, rows: rows };
+  }
+
+  function renderTableHTML(headers, rows){
+    var thead = "<tr>" + headers.map(function(h){ return "<th>"+h+"</th>"; }).join("") + "</tr>";
+    var tbody = rows.map(function(r){
+      return "<tr>" + r.map(function(cell, i){
+        if(i === 0) return "<td>" + cell + "</td>";
+        var neg = cell < 0;
+        return "<td class='" + (neg ? "neg" : "") + "'>" + (neg ? "-" : "") + "AED " + Math.abs(cell).toLocaleString("en-AE") + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    return "<table class='cfTable'><thead>" + thead + "</thead><tbody>" + tbody + "</tbody></table>";
+  }
+
+  function renderCashflowTable(containerId, result, granularity){
+    var t = getTableData(result, granularity);
+    $(containerId).innerHTML = renderTableHTML(t.headers, t.rows);
+  }
+
+  function exportExcel(headers, rows, filename){
+    var aoa = [headers].concat(rows);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cash Flow");
+    XLSX.writeFile(wb, filename);
+  }
+
+  function exportPDF(headers, rows, title){
+    var win = window.open("", "_blank");
+    if(!win){ alert("Please allow pop-ups to export as PDF."); return; }
+    var tableHtml = renderTableHTML(headers, rows);
+    win.document.write(
+      "<html><head><title>" + title + "</title><style>" +
+      "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:24px;color:#14181C}" +
+      "h1{font-size:18px;margin-bottom:16px}" +
+      "table{width:100%;border-collapse:collapse;font-size:11px}" +
+      "th{background:#14181C;color:#fff;text-align:right;padding:6px 8px}" +
+      "th:first-child{text-align:left}" +
+      "td{padding:5px 8px;text-align:right;border-bottom:1px solid #ECE9E3}" +
+      "td:first-child{text-align:left;font-weight:700}" +
+      "</style></head><body><h1>" + title + "</h1>" + tableHtml + "</body></html>"
+    );
+    win.document.close();
+    win.focus();
+    setTimeout(function(){ win.print(); }, 300);
   }
 
   function renderCalculator(){
+    var lastHoldResult = null;
     $("fs").innerHTML = CALC_UI;
     initTabs();
     initCollapsibles();
@@ -310,10 +424,36 @@
             '<div class="sLine"><span>Appreciation</span><span class="v">+'+AED(d.profitSummary.appreciation)+'</span></div>'+
           '</div>'+
         '</div>'+
-        '<div class="chartWrap"><h3>Yearly Cash Flow</h3><canvas id="cfChartRental"></canvas></div>';
+        '<div class="chartWrap"><h3>Cash Flow <span style="float:right"><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartRental"></canvas></div>'+
+        '<div class="tableWrap"><div class="tableHead"><h3>Cash Flow Detail</h3><div class="exportBtns">'+
+          '<button class="exportBtn" id="exportExcelBtn">Export Excel</button>'+
+          '<button class="exportBtn" id="exportPdfBtn">Export PDF</button>'+
+        '</div></div><div id="cfTableHold"></div></div>';
 
         $("holdResults").innerHTML = html;
-        drawCashflowChart($("cfChartRental"), d.yearly);
+        lastHoldResult = d;
+        var currentGran = "annual";
+        drawCashflowChart($("cfChartRental"), getBucketedData(d, currentGran));
+        renderCashflowTable("cfTableHold", d, currentGran);
+
+        $("holdResults").querySelectorAll(".granBtnFs").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            $("holdResults").querySelectorAll(".granBtnFs").forEach(function(b){ b.classList.remove("on"); });
+            btn.classList.add("on");
+            currentGran = btn.dataset.g;
+            drawCashflowChart($("cfChartRental"), getBucketedData(lastHoldResult, currentGran));
+            renderCashflowTable("cfTableHold", lastHoldResult, currentGran);
+          });
+        });
+
+        $("exportExcelBtn").addEventListener("click", function(){
+          var t = getTableData(lastHoldResult, currentGran);
+          exportExcel(t.headers, t.rows, "scarce-feasibility-cashflow.xlsx");
+        });
+        $("exportPdfBtn").addEventListener("click", function(){
+          var t = getTableData(lastHoldResult, currentGran);
+          exportPDF(t.headers, t.rows, "Scarce Feasibility Study — Cash Flow");
+        });
       } catch(e){
         $("holdResults").innerHTML = '<p style="color:#C0392B">Could not calculate — ' + e.message + '</p>';
       } finally {

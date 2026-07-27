@@ -380,11 +380,27 @@
   }
 
   function exportExcel(headers, rows, filename){
-    var aoa = [headers].concat(rows);
+    var brandRows = [];
+    if(userBranding.name) brandRows.push([userBranding.name]);
+    if(userBranding.contactInfo) brandRows.push([userBranding.contactInfo]);
+    if(brandRows.length) brandRows.push([]); // blank spacer row before the table
+
+    var aoa = brandRows.concat([headers]).concat(rows);
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Cash Flow");
     XLSX.writeFile(wb, filename);
+  }
+
+  function brandingHeaderHtml(){
+    if(!userBranding.logoUrl && !userBranding.name && !userBranding.contactInfo) return "";
+    return "<div class='brandHeader'>" +
+      (userBranding.logoUrl ? "<img src='"+userBranding.logoUrl+"' class='brandLogo'>" : "") +
+      "<div>" +
+        (userBranding.name ? "<div class='brandName'>"+userBranding.name+"</div>" : "") +
+        (userBranding.contactInfo ? "<div class='brandContact'>"+userBranding.contactInfo+"</div>" : "") +
+      "</div>" +
+    "</div>";
   }
 
   function exportPDF(headers, rows, title){
@@ -395,12 +411,16 @@
       "<html><head><title>" + title + "</title><style>" +
       "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:24px;color:#14181C}" +
       "h1{font-size:18px;margin-bottom:16px}" +
+      ".brandHeader{display:flex;align-items:center;gap:12px;border-bottom:1px solid #ECE9E3;padding-bottom:14px;margin-bottom:14px}" +
+      ".brandLogo{width:48px;height:48px;object-fit:contain;border-radius:6px}" +
+      ".brandName{font-weight:800;font-size:14px;color:#14181C}" +
+      ".brandContact{font-size:11px;color:#7A7F87}" +
       "table{width:100%;border-collapse:collapse;font-size:11px}" +
       "th{background:#14181C;color:#fff;text-align:right;padding:6px 8px}" +
       "th:first-child{text-align:left}" +
       "td{padding:5px 8px;text-align:right;border-bottom:1px solid #ECE9E3}" +
       "td:first-child{text-align:left;font-weight:700}" +
-      "</style></head><body><h1>" + title + "</h1>" + tableHtml + "</body></html>"
+      "</style></head><body>" + brandingHeaderHtml() + "<h1>" + title + "</h1>" + tableHtml + "</body></html>"
     );
     win.document.close();
     win.focus();
@@ -603,11 +623,16 @@
       '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
   }
 
+  var userBranding = { name: null, logoUrl: null, contactInfo: null };
+
   async function init(){
     var session = (await sb.auth.getSession()).data.session;
     if(!session){ renderGate(); return; }
-    var profRes = await sb.from("profiles").select("tier").eq("id", session.user.id).single();
+    var profRes = await sb.from("profiles").select("tier, name, logo_url, contact_info").eq("id", session.user.id).single();
     if(profRes.data && profRes.data.tier === "paid"){
+      userBranding.name = profRes.data.name || null;
+      userBranding.logoUrl = profRes.data.logo_url || null;
+      userBranding.contactInfo = profRes.data.contact_info || null;
       renderCalculator();
     } else {
       renderGate();

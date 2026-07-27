@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Publications — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:720px;margin:0 auto;padding:4px 16px 40px}
+  .hero{text-align:center;margin:40px auto 30px}
+  .hero h1{font-size:34px;font-weight:800;color:var(--navy)}
+  .hero .tag{color:var(--teal);font-weight:700;font-style:italic;font-size:16px;margin-top:6px}
+  .bookCard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px;margin-bottom:20px}
+  .bookCard h2{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:8px}
+  .bookCard p{color:var(--ink);font-size:14.5px;line-height:1.65;margin-bottom:12px}
+  .comingSoon{background:var(--navy);border-radius:14px;padding:26px 28px;color:#fff;text-align:center}
+  .comingSoon h3{font-size:16px;font-weight:800;margin-bottom:8px;color:var(--gold)}
+  .comingSoon p{font-size:13.5px;color:#C9CDD2;line-height:1.5;margin-bottom:14px}
+  .comingSoon a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:10px 20px;border-radius:8px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html">SCARCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Our Publications</h1>
+      <p class="tag">The Scarcity Principle</p>
+    </div>
+
+    <div class="bookCard">
+      <h2>The Scarcity Principle</h2>
+      <p>The idea behind Scarce started here — the case for why scarcity, not finish quality or payment plans, is what actually separates UAE properties that compound in value from ones that don't. The Ratings library, the Feasibility Study, and every tool on this site are the practical extension of that same thesis.</p>
+      <p>Further reports and deeper research pieces are in progress and will appear here as they're published.</p>
+    </div>
+
+    <div class="comingSoon">
+      <h3>More reports coming soon</h3>
+      <p>Sign up to get notified when new research and rated-community deep dives are published.</p>
+      <a href="auth.html?mode=signup">Sign up free</a>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+  injectSkylineBackground();
+  var sb = supabase.createClient(
+    "https://qlngrgkzpiyouaewuzhk.supabase.co",
+    "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv"
+  );
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+</script>
+</body>
+</html>

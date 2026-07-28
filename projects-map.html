@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projects Map — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  .wrap{max-width:1180px;margin:0 auto;padding:4px 16px 40px}
+  .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:16px 0 6px}
+  .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+  .subLead{color:var(--grey);font-size:13.5px;margin-bottom:16px}
+  #map{height:620px;border-radius:14px;border:1px solid var(--line);z-index:1}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--grey)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .noCoords{background:#FDF3EA;border-left:4px solid var(--orange);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--ink);margin-top:12px}
+  .popupName{font-weight:800;color:var(--navy);font-size:14px;margin-bottom:2px}
+  .popupMeta{font-size:11.5px;color:var(--grey);margin-bottom:6px}
+  .popupScore{font-size:13px;font-weight:700}
+  .popupLink{display:inline-block;margin-top:6px;font-size:12px;font-weight:700;color:var(--teal-deep)}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="SCARCE">SC<svg viewBox="0 0 20 24" width="14" height="17" style="vertical-align:-3px;margin:0 1px" aria-hidden="true"><path d="M10 2 L2 22 M10 2 L18 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="10" cy="15" r="2.8" fill="#C9952B"/></svg>RCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div class="toolTitle">SCARCE <span>Projects Map</span></div>
+    <div class="subLead">Every rated community, plotted where it actually is — colored by Scarce Score.</div>
+    <div id="map"></div>
+    <div class="legend" id="legend"></div>
+    <div class="noCoords" id="noCoordsNote" style="display:none"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+
+  var bandLegend = [
+    { band: "Exceptional", color: "#0B7A76" },
+    { band: "Strong", color: "#35A8A3" },
+    { band: "Average", color: "#C9952B" },
+    { band: "Weak", color: "#D9772F" },
+    { band: "Avoid", color: "#C0392B" },
+  ];
+  document.getElementById("legend").innerHTML = bandLegend.map(function(b){
+    return "<span><i style='background:"+b.color+"'></i>"+b.band+"</span>";
+  }).join("");
+
+  var map = L.map("map").setView([24.45, 54.5], 8); // roughly centered between Dubai and Abu Dhabi
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 18,
+  }).addTo(map);
+
+  fetch(FUNCTIONS_URL + "/list-ratings", {
+    headers: { "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY, "apikey": SUPABASE_PUBLISHABLE_KEY }
+  }).then(function(res){ return res.json(); }).then(function(data){
+    var communities = data.ratings || [];
+    var plotted = [];
+    var missing = [];
+
+    communities.forEach(function(c){
+      if(c.latitude && c.longitude){
+        plotted.push(c);
+      } else {
+        missing.push(c.name);
+      }
+    });
+
+    if(plotted.length){
+      var bounds = [];
+      plotted.forEach(function(c){
+        var marker = L.circleMarker([c.latitude, c.longitude], {
+          radius: 9,
+          color: "#fff",
+          weight: 2,
+          fillColor: c.bandColor,
+          fillOpacity: 0.9,
+        }).addTo(map);
+
+        marker.bindPopup(
+          "<div class='popupName'>" + c.name + "</div>" +
+          "<div class='popupMeta'>" + (c.city||"") + (c.developer ? " · " + c.developer : "") + "</div>" +
+          "<div class='popupScore' style='color:" + c.bandColor + "'>" + c.score.toFixed(1) + " / 100 — " + c.band + "</div>" +
+          "<a class='popupLink' href='ratings-detail.html?slug=" + c.slug + "'>View full rating →</a>"
+        );
+        bounds.push([c.latitude, c.longitude]);
+      });
+      map.fitBounds(bounds, { padding: [40, 40] });
+    }
+
+    if(missing.length){
+      document.getElementById("noCoordsNote").style.display = "block";
+      document.getElementById("noCoordsNote").textContent =
+        "Not shown on the map yet (no coordinates on file): " + missing.join(", ") + ".";
+    }
+  }).catch(function(e){
+    document.getElementById("noCoordsNote").style.display = "block";
+    document.getElementById("noCoordsNote").textContent = "Unable to load the map data. (" + e.message + ")";
+  });
+})();
+</script>
+</body>
+</html>

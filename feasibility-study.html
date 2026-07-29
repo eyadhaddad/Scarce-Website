@@ -351,6 +351,7 @@
       '<div class="fld"><label>Size (sqft)</label><input type="number" id="o_size" value="900"></div>'+
       '<div class="fld"><label>Current monthly rent (AED)</label><input type="number" id="o_monthlyRent" value="7500"></div>'+
       '<div class="fld"><label>Current mortgage payment (AED/mo)</label><input type="number" id="o_monthlyMortgagePayment" value="4200"></div>'+
+      '<div class="fld"><label>Current interest rate (%)</label><input type="number" id="o_interestRatePct" value="4.5" step="0.1"></div>'+
     '</div></div></div>'+
 
     '<div class="secCard"><div class="collapsible-head" id="oHead2"><h2>Operating Costs</h2><span class="chevron"></span></div>'+
@@ -878,7 +879,7 @@
       var body = {
         currentValue:+$("o_currentValue").value, remainingLoanBalance:+$("o_remainingLoanBalance").value, size:+$("o_size").value,
         monthlyRent:+$("o_monthlyRent").value, scPsf:+$("o_scPsf").value, mgmtPct:+$("o_mgmtPct").value, maintPct:+$("o_maintPct").value,
-        insurePct:+$("o_insurePct").value, monthlyMortgagePayment:+$("o_monthlyMortgagePayment").value,
+        insurePct:+$("o_insurePct").value, monthlyMortgagePayment:+$("o_monthlyMortgagePayment").value, interestRatePct:+$("o_interestRatePct").value,
         holdMoreYears:+$("o_holdMoreYears").value, appPct:+$("o_appPct").value,
         sellAgentPct:+$("o_sellAgentPct").value, earlySettlePct:+$("o_earlySettlePct").value, earlySettleCap:+$("o_earlySettleCap").value,
         alternativeReturnPct:+$("o_alternativeReturnPct").value
@@ -899,6 +900,7 @@
               '<div class="sLine"><span>Monthly cash flow</span><span class="v">'+AED(d.keepHolding.monthlyCashFlow)+'</span></div>'+
               '<div class="sLine"><span>Cumulative rental cash flow</span><span class="v">'+AED(d.keepHolding.cumulativeRentalCashFlow)+'</span></div>'+
               '<div class="sLine"><span>Property value at end</span><span class="v">'+AED(d.keepHolding.futurePropertyValue)+'</span></div>'+
+              '<div class="sLine"><span>Loan balance at end (projected)</span><span class="v">'+AED(d.keepHolding.futureLoanBalance)+'</span></div>'+
               '<div class="sLine"><span>Net sale at end</span><span class="v">'+AED(d.keepHolding.netSaleAtEnd)+'</span></div>'+
               '<div class="sLine"><span><b>Total value if hold</b></span><span class="v"><b>'+AED(d.keepHolding.totalValueIfHold)+'</b></span></div>'+
             '</div>'+

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compare Communities — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:1000px;margin:0 auto;padding:4px 16px 40px}
+  #cc *{box-sizing:border-box}
+  .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:16px 0 14px}
+  .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+  .pickRow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:700px){.pickRow{grid-template-columns:1fr}}
+  .pickRow select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13.5px;background:#fff;color:var(--navy);font-weight:600}
+  .runBtn{background:var(--teal);color:#fff;border:none;font:inherit;font-weight:700;font-size:14px;padding:12px 24px;border-radius:9px;cursor:pointer;margin-bottom:20px}
+  .runBtn:hover{background:var(--teal-deep)}
+  .runBtn:disabled{background:var(--grey);cursor:not-allowed}
+  .radarWrap{background:var(--navy);border-radius:14px;padding:20px;margin-bottom:16px}
+  #radarCv{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;justify-content:center}
+  .legend span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#fff;font-weight:700}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  table.compTable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  table.compTable th{background:var(--navy);color:#fff;text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase}
+  table.compTable td{padding:8px 12px;border-bottom:1px solid var(--line)}
+  table.compTable tr:last-child td{border-bottom:0}
+  .rGate{background:var(--navy);border-radius:14px;padding:40px 30px;color:#fff;text-align:center;max-width:520px;margin:60px auto}
+  .rGate h3{font-size:19px;font-weight:800;margin-bottom:8px}
+  .rGate p{font-size:13.5px;color:#C9CDD2;margin-bottom:16px;line-height:1.5}
+  .rGate a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px}
+  .loading{color:var(--grey);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="SCARCE">SC<svg viewBox="0 0 20 24" width="14" height="17" style="vertical-align:-3px;margin:0 1px" aria-hidden="true"><path d="M10 2 L2 22 M10 2 L18 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="10" cy="15" r="2.8" fill="#C9952B"/></svg>RCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div id="cc"><p class="loading">Checking your account…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var FUNCTIONS_URL = SUPABASE_URL + "/functions/v1";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+
+  var $ = function(id){ return document.getElementById(id); };
+  var COLORS = ["#0E9B96", "#C9952B", "#7A5FBF"];
+
+  function renderGate(){
+    $("cc").innerHTML = '<div class="rGate"><h3>Compare Communities is part of Scarce Plus</h3>'+
+      '<p>Upgrade to Scarce Plus to overlay full ratings for up to three communities side by side.</p>'+
+      '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
+  }
+
+  async function authedHeaders(){
+    var session = (await sb.auth.getSession()).data.session;
+    return { "Content-Type": "application/json", "apikey": SUPABASE_PUBLISHABLE_KEY,
+      "Authorization": "Bearer " + (session ? session.access_token : SUPABASE_PUBLISHABLE_KEY) };
+  }
+
+  async function init(){
+    var session = (await sb.auth.getSession()).data.session;
+    if(!session){ renderGate(); return; }
+    var profRes = await sb.from("profiles").select("tier").eq("id", session.user.id).single();
+    if(!profRes.data || profRes.data.tier !== "paid"){ renderGate(); return; }
+    renderTool();
+  }
+
+  async function renderTool(){
+    $("cc").innerHTML =
+      '<div class="toolTitle">SCARCE <span>Compare Communities</span></div>'+
+      '<div class="pickRow">'+
+        '<select id="pick0"><option value="">— Choose a community —</option></select>'+
+        '<select id="pick1"><option value="">— Choose a community —</option></select>'+
+        '<select id="pick2"><option value="">— Choose a community —</option></select>'+
+      '</div>'+
+      '<button class="runBtn" id="compareBtn">Compare</button>'+
+      '<div id="ccResults"></div>';
+
+    var listRes = await fetch(FUNCTIONS_URL + "/list-ratings", {
+      headers: { "Authorization": "Bearer " + SUPABASE_PUBLISHABLE_KEY, "apikey": SUPABASE_PUBLISHABLE_KEY }
+    });
+    var listData = await listRes.json();
+    var options = (listData.ratings || []).map(function(c){
+      return "<option value='" + c.slug + "'>" + c.name + " (" + c.score.toFixed(1) + ")</option>";
+    }).join("");
+    ["pick0","pick1","pick2"].forEach(function(id){
+      $(id).innerHTML += options;
+    });
+
+    $("compareBtn").addEventListener("click", runComparison);
+  }
+
+  async function runComparison(){
+    var slugs = ["pick0","pick1","pick2"].map(function(id){ return $(id).value; }).filter(function(v){ return v; });
+    if(slugs.length < 2){
+      $("ccResults").innerHTML = '<p style="color:#C0392B">Choose at least two communities to compare.</p>';
+      return;
+    }
+
+    var btn = $("compareBtn"); btn.disabled = true; btn.textContent = "Loading…";
+    try {
+      var headers = await authedHeaders();
+      var results = await Promise.all(slugs.map(function(slug){
+        return fetch(FUNCTIONS_URL + "/get-rating", { method: "POST", headers: headers, body: JSON.stringify({ slug: slug }) })
+          .then(function(r){ return r.json(); });
+      }));
+
+      if(results.some(function(r){ return r.error; })){
+        $("ccResults").innerHTML = '<p style="color:#C0392B">Could not load one or more ratings.</p>';
+        return;
+      }
+
+      drawComparison(results);
+    } catch(e){
+      $("ccResults").innerHTML = '<p style="color:#C0392B">Could not compare — ' + e.message + '</p>';
+    } finally {
+      btn.disabled = false; btn.textContent = "Compare";
+    }
+  }
+
+  function drawComparison(results){
+    var order = results[0].categoryOrder;
+    var html = '<div class="radarWrap"><canvas id="radarCv" width="900" height="900"></canvas>'+
+      '<div class="legend">' + results.map(function(r, i){
+        return "<span><i style='background:" + COLORS[i] + "'></i>" + r.name + " — " + r.score.toFixed(1) + "</span>";
+      }).join("") + '</div></div>';
+
+    html += '<table class="compTable"><thead><tr><th>Category</th>' +
+      results.map(function(r){ return "<th>" + r.name + "</th>"; }).join("") + '</tr></thead><tbody>';
+    order.forEach(function(cat){
+      html += "<tr><td>" + cat + "</td>" + results.map(function(r){
+        var c = r.categories[cat];
+        return "<td>" + (c ? c.score.toFixed(1) + " / 5" : "—") + "</td>";
+      }).join("") + "</tr>";
+    });
+    html += "</tbody></table>";
+
+    $("ccResults").innerHTML = html;
+
+    var cv = $("radarCv");
+    var ctx = cv.getContext("2d");
+    var W = cv.width, H = cv.height, cx = W/2, cy = H/2, R = W*0.32, N = order.length, step = Math.PI*2/N;
+    function ang(i){ return -Math.PI/2 + i*step; }
+
+    ctx.fillStyle = "#14181C"; ctx.fillRect(0,0,W,H);
+    for(var ring=1; ring<=5; ring++){
+      ctx.beginPath();
+      for(var i=0;i<N;i++){ var a=ang(i), rr=R*ring/5, x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.closePath();
+      ctx.strokeStyle = ring===5 ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.1)";
+      ctx.lineWidth = ring===5?2:1; ctx.stroke();
+    }
+
+    results.forEach(function(r, ri){
+      var col = COLORS[ri];
+      ctx.beginPath();
+      order.forEach(function(cat, i){
+        var sc = (r.categories[cat] && r.categories[cat].score) || 0, a=ang(i), rr=R*sc/5, x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+        i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = col + "33"; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
+    });
+
+    ctx.font = "600 15px -apple-system,Helvetica,Arial,sans-serif";
+    ctx.fillStyle = "#C9CDD2"; ctx.textBaseline = "middle";
+    order.forEach(function(cat, i){
+      var a = ang(i), labelR = R + 24, x = cx+Math.cos(a)*labelR, y = cy+Math.sin(a)*labelR;
+      ctx.textAlign = Math.cos(a) > 0.3 ? "left" : Math.cos(a) < -0.3 ? "right" : "center";
+      var words = cat.split(" "), lines = [], line = "";
+      words.forEach(function(w){
+        var test = line ? line+" "+w : w;
+        if(test.length > 12 && line){ lines.push(line); line = w; } else { line = test; }
+      });
+      if(line) lines.push(line);
+      lines.forEach(function(ln, li){ ctx.fillText(ln, x, y + (li - (lines.length-1)/2) * 15); });
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

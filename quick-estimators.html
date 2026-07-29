@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick Estimators — Scarce</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:700px;margin:0 auto;padding:4px 16px 40px}
+  #qe *{box-sizing:border-box}
+  .toolTitle{font-size:22px;font-weight:800;letter-spacing:.03em;color:var(--navy);margin:16px 0 14px}
+  .toolTitle span{color:var(--teal);font-style:italic;font-weight:800}
+  .typeTabs{display:flex;gap:6px;margin-bottom:16px;background:var(--mid);padding:5px;border-radius:11px}
+  .typeTab{flex:1;text-align:center;padding:10px;border-radius:8px;font-weight:700;font-size:13px;color:var(--grey);cursor:pointer}
+  .typeTab.on{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(20,24,28,.08)}
+  .modePanel{display:none}
+  .modePanel.on{display:block}
+  .secCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12px;color:var(--grey);font-weight:700;margin-bottom:6px}
+  .fld input, .fld select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13.5px;background:var(--cream);color:var(--navy);font-weight:600}
+  .resultBox{background:var(--navy);border-radius:12px;padding:20px 22px;color:#fff;margin-top:6px}
+  .resultBox .rLbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#B9BDC2;font-weight:700}
+  .resultBox .rVal{font-size:30px;font-weight:800;margin-top:4px}
+  .resultBox .rSub{font-size:12px;color:#C9CDD2;margin-top:8px;line-height:1.5}
+  .tierNote{font-size:11.5px;color:var(--grey);margin-top:10px;line-height:1.5}
+  .breakdownRow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.15);font-size:12.5px}
+  .breakdownRow:last-child{border-bottom:0}
+  .rGate{background:var(--navy);border-radius:14px;padding:40px 30px;color:#fff;text-align:center;max-width:520px;margin:60px auto}
+  .rGate h3{font-size:19px;font-weight:800;margin-bottom:8px}
+  .rGate p{font-size:13.5px;color:#C9CDD2;margin-bottom:16px;line-height:1.5}
+  .rGate a{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px}
+  .loading{color:var(--grey);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="SCARCE">SC<svg viewBox="0 0 20 24" width="14" height="17" style="vertical-align:-3px;margin:0 1px" aria-hidden="true"><path d="M10 2 L2 22 M10 2 L18 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="10" cy="15" r="2.8" fill="#C9952B"/></svg>RCE</a>
+    <a class="signin" href="auth.html">Sign in</a>
+  </div>
+
+  <div class="wrap">
+    <div id="qe"><p class="loading">Checking your account…</p></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  injectSkylineBackground();
+  var SUPABASE_URL = "https://qlngrgkzpiyouaewuzhk.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b7atcH7tnMuuiT9BCqJKmA_bUZw1mZv";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  window.supabaseClient = sb;
+  initAuthTopbar(sb);
+
+  var $ = function(id){ return document.getElementById(id); };
+  var AED = function(n){ return "AED " + Math.round(n).toLocaleString("en-AE"); };
+
+  function renderGate(){
+    $("qe").innerHTML = '<div class="rGate"><h3>Quick Estimators is part of Scarce Plus</h3>'+
+      '<p>Upgrade to Scarce Plus for the Market Rent and Renovation Cost estimators.</p>'+
+      '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
+  }
+
+  var RENO_TIERS = {
+    cosmetic: { label: "Cosmetic refresh", low: 150, high: 300 },
+    midrange: { label: "Mid-range renovation", low: 300, high: 600 },
+    luxury: { label: "Luxury renovation", low: 600, high: 1000 },
+  };
+
+  function renderTool(){
+    $("qe").innerHTML =
+      '<div class="toolTitle">SCARCE <span>Quick Estimators</span></div>'+
+      '<div class="typeTabs">'+
+        '<div class="typeTab on" data-t="rent">Market Rent</div>'+
+        '<div class="typeTab" data-t="reno">Renovation Cost</div>'+
+      '</div>'+
+
+      '<div class="modePanel on" id="panelRent">'+
+        '<div class="secCard">'+
+          '<div class="fld"><label>Property price (AED)</label><input type="number" id="r_price" value="1500000"></div>'+
+          '<div class="fld"><label>Assumed gross rental yield (%)</label><input type="number" id="r_yield" value="7" step="0.1"></div>'+
+          '<div class="tierNote">Not sure what yield to use? Check this community\'s Income Potential score on its Ratings page — a higher score generally means a stronger rental yield relative to price.</div>'+
+        '</div>'+
+        '<div class="resultBox" id="rentResult"></div>'+
+      '</div>'+
+
+      '<div class="modePanel" id="panelReno">'+
+        '<div class="secCard">'+
+          '<div class="fld"><label>Size (sqft)</label><input type="number" id="v_size" value="900"></div>'+
+          '<div class="fld"><label>Renovation level</label><select id="v_tier">'+
+            '<option value="cosmetic">Cosmetic refresh — paint, fixtures, minor repairs</option>'+
+            '<option value="midrange" selected>Mid-range — new kitchen &amp; bathrooms, tiling</option>'+
+            '<option value="luxury">Luxury — premium materials, layout changes</option>'+
+          '</select></div>'+
+          '<div class="tierNote">Based on typical 2026 Dubai/Abu Dhabi apartment renovation rates. Actual quotes vary significantly by contractor, building access, and finish choices — use this as a starting budget, not a quote.</div>'+
+        '</div>'+
+        '<div class="resultBox" id="renoResult"></div>'+
+      '</div>';
+
+    document.querySelectorAll(".typeTab").forEach(function(tab){
+      tab.addEventListener("click", function(){
+        document.querySelectorAll(".typeTab").forEach(function(t){ t.classList.remove("on"); });
+        document.querySelectorAll(".modePanel").forEach(function(p){ p.classList.remove("on"); });
+        tab.classList.add("on");
+        $(tab.dataset.t === "rent" ? "panelRent" : "panelReno").classList.add("on");
+      });
+    });
+
+    function updateRent(){
+      var price = +$("r_price").value || 0;
+      var yieldPct = +$("r_yield").value || 0;
+      var annual = price * yieldPct / 100;
+      var monthly = annual / 12;
+      $("rentResult").innerHTML =
+        '<div class="rLbl">Estimated Monthly Rent</div><div class="rVal">' + AED(monthly) + '</div>'+
+        '<div class="rSub">' + AED(annual) + ' / year, based on a ' + yieldPct + '% gross yield assumption. This is your own assumption applied to the price — not a live market comp.</div>';
+    }
+    ["r_price","r_yield"].forEach(function(id){ $(id).addEventListener("input", updateRent); });
+    updateRent();
+
+    function updateReno(){
+      var size = +$("v_size").value || 0;
+      var tier = RENO_TIERS[$("v_tier").value];
+      var low = size * tier.low, high = size * tier.high, mid = (low+high)/2;
+      $("renoResult").innerHTML =
+        '<div class="rLbl">' + tier.label + ' — Estimated Budget</div><div class="rVal">' + AED(low) + ' – ' + AED(high) + '</div>'+
+        '<div class="breakdownRow"><span>Rate used</span><span>AED ' + tier.low + '–' + tier.high + ' / sqft</span></div>'+
+        '<div class="breakdownRow"><span>Midpoint estimate</span><span>' + AED(mid) + '</span></div>'+
+        '<div class="rSub">Get at least two contractor quotes before committing — actual costs depend heavily on building access rules, material choices, and scope.</div>';
+    }
+    ["v_size","v_tier"].forEach(function(id){ $(id).addEventListener("input", updateReno); $(id).addEventListener("change", updateReno); });
+    updateReno();
+  }
+
+  async function init(){
+    var session = (await sb.auth.getSession()).data.session;
+    if(!session){ renderGate(); return; }
+    var profRes = await sb.from("profiles").select("tier").eq("id", session.user.id).single();
+    if(profRes.data && profRes.data.tier === "paid"){
+      renderTool();
+    } else {
+      renderGate();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

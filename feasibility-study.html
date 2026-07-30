@@ -590,7 +590,7 @@
   // lines (sell-and-reinvest vs keep-holding) over time, not a single
   // cash-flow bar series like every other tab ----
 
-  function drawComparisonChart(canvas, yearly){
+  function drawComparisonChart(canvas, data){
     var dpr = window.devicePixelRatio || 1;
     var cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 600, cssH = 220;
     canvas.width = cssW*dpr; canvas.height = cssH*dpr;
@@ -598,14 +598,14 @@
     ctx.clearRect(0,0,cssW,cssH);
     var padL=45,padR=8,padT=14,padB=24,w=cssW-padL-padR,h=cssH-padT-padB;
 
-    var sellVals = yearly.map(function(y){ return y.sellValue; });
-    var holdVals = yearly.map(function(y){ return y.holdValue; });
+    var sellVals = data.map(function(y){ return y.sellValue; });
+    var holdVals = data.map(function(y){ return y.holdValue; });
     var all = sellVals.concat(holdVals);
     var maxV = Math.max.apply(null, all), minV = Math.min.apply(null, all.concat([0]));
     if(maxV===minV){maxV+=1;minV-=1;}
     var pad=(maxV-minV)*0.1; maxV+=pad; minV-=Math.max(pad,0);
     function Y(v){ return padT+(maxV-v)/(maxV-minV)*h; }
-    var n = yearly.length, stepX = w/(n-1||1);
+    var n = data.length, stepX = w/(n-1||1);
 
     // gridlines + y-axis labels
     ctx.strokeStyle="rgba(20,24,28,.08)"; ctx.fillStyle="#7A7F87"; ctx.font="9px -apple-system,Helvetica,Arial,sans-serif"; ctx.textAlign="right";
@@ -628,19 +628,38 @@
     drawLine(holdVals, "#0E9B96");
 
     ctx.fillStyle="#7A7F87"; ctx.textAlign="center";
-    yearly.forEach(function(y,i){ ctx.fillText("Y"+y.y, padL+stepX*i, cssH-6); });
+    var step = Math.max(1, Math.ceil(n/10));
+    for(var k=0;k<n;k+=step){ ctx.fillText(data[k].label, padL+stepX*k, cssH-6); }
   }
 
-  function getTableDataSOH(result){
-    var headers = ["Year","If Sell Now (AED)","If Keep Holding (AED)"];
-    var rows = result.yearly.map(function(y){
-      return ["Y"+y.y, Math.round(y.sellValue), Math.round(y.holdValue)];
+  // These are point-in-time snapshots (a value AT a given month), not
+  // flows to sum — so granularity here means SAMPLING the monthly
+  // array at intervals, not adding values together like a cash-flow
+  // chart would.
+  function getBucketedDataSOH(result, granularity){
+    if(granularity === "annual"){
+      return result.yearly.map(function(y){ return { label: "Y"+y.y, sellValue: y.sellValue, holdValue: y.holdValue }; });
+    }
+    var interval = granularity === "quarterly" ? 3 : 1;
+    var out = [];
+    result.monthly.forEach(function(m, i){
+      if(i % interval === 0){
+        var label = granularity === "quarterly" ? "Q"+Math.ceil(m.m/3) : "M"+m.m;
+        out.push({ label: label, sellValue: m.sellValue, holdValue: m.holdValue });
+      }
     });
+    return out;
+  }
+
+  function getTableDataSOH(result, granularity){
+    var bucketed = getBucketedDataSOH(result, granularity || "annual");
+    var headers = ["Period","If Sell Now (AED)","If Keep Holding (AED)"];
+    var rows = bucketed.map(function(b){ return [b.label, Math.round(b.sellValue), Math.round(b.holdValue)]; });
     return { headers: headers, rows: rows };
   }
 
-  function renderCashflowTableSOH(containerId, result){
-    var t = getTableDataSOH(result);
+  function renderCashflowTableSOH(containerId, result, granularity){
+    var t = getTableDataSOH(result, granularity);
     $(containerId).innerHTML = renderTableHTML(t.headers, t.rows);
   }
 
@@ -1023,7 +1042,7 @@
               '<div class="sLine"><span>New mortgage payment</span><span class="v">'+AED(d.stabilizedPhase.newMonthlyPayment)+'</span></div>'+
             '</div>'+
           '</div>'+
-          '<div class="chartWrap"><h3><span>Cash Flow (rehab \u2192 refinance \u2192 stabilized)</span><span><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartBRRRR"></canvas></div>'+
+          '<div class="chartWrap"><h3><span>Cash Flow (rehab \u2192 refinance \u2192 stabilized)</span><span><button class="granBtnFs on" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs" data-g="annual">Annual</button></span></h3><canvas id="cfChartBRRRR"></canvas></div>'+
           '<div class="tableWrap"><div class="tableHead"><h3>Cash Flow Detail</h3><div class="exportBtns">'+
             '<button class="exportBtn" id="exportExcelBtnBRRRR">Export Excel</button>'+
             '<button class="exportBtn" id="exportPdfBtnBRRRR">Export PDF</button>'+
@@ -1031,7 +1050,7 @@
 
         $("brrrrResults").innerHTML = html;
         lastBRRRRResult = d;
-        var currentGranBRRRR = "annual";
+        var currentGranBRRRR = "monthly";
         drawCashflowChart($("cfChartBRRRR"), getBucketedDataBRRRR(d, currentGranBRRRR));
         renderCashflowTableBRRRR("cfTableBRRRR", d, currentGranBRRRR);
 
@@ -1089,23 +1108,34 @@
               '<div class="sLine"><span><b>Total value if hold</b></span><span class="v"><b>'+AED(d.keepHolding.totalValueIfHold)+'</b></span></div>'+
             '</div>'+
           '</div>'+
-          '<div class="chartWrap"><h3><span>Sell vs. Hold — Value Over Time</span></h3><canvas id="cfChartSOH"></canvas></div>'+
+          '<div class="chartWrap"><h3><span>Sell vs. Hold — Value Over Time</span><span><button class="granBtnFs" data-g="monthly">Monthly</button><button class="granBtnFs" data-g="quarterly">Quarterly</button><button class="granBtnFs on" data-g="annual">Annual</button></span></h3><canvas id="cfChartSOH"></canvas></div>'+
           '<div class="legend"><span><i style="background:#C9952B"></i>If sell now, reinvested</span><span><i style="background:#0E9B96"></i>If keep holding</span></div>'+
-          '<div class="tableWrap"><div class="tableHead"><h3>Year by Year</h3><div class="exportBtns">'+
+          '<div class="tableWrap"><div class="tableHead"><h3>Period by Period</h3><div class="exportBtns">'+
             '<button class="exportBtn" id="exportExcelBtnSOH">Export Excel</button>'+
             '<button class="exportBtn" id="exportPdfBtnSOH">Export PDF</button>'+
           '</div></div><div id="cfTableSOH"></div></div>';
 
         $("sohResults").innerHTML = html;
-        drawComparisonChart($("cfChartSOH"), d.yearly);
-        renderCashflowTableSOH("cfTableSOH", d);
+        var currentGranSOH = "annual";
+        drawComparisonChart($("cfChartSOH"), getBucketedDataSOH(d, currentGranSOH));
+        renderCashflowTableSOH("cfTableSOH", d, currentGranSOH);
+
+        $("sohResults").querySelectorAll(".granBtnFs").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            $("sohResults").querySelectorAll(".granBtnFs").forEach(function(b){ b.classList.remove("on"); });
+            btn.classList.add("on");
+            currentGranSOH = btn.dataset.g;
+            drawComparisonChart($("cfChartSOH"), getBucketedDataSOH(d, currentGranSOH));
+            renderCashflowTableSOH("cfTableSOH", d, currentGranSOH);
+          });
+        });
 
         $("exportExcelBtnSOH").addEventListener("click", function(){
-          var t = getTableDataSOH(d);
+          var t = getTableDataSOH(d, currentGranSOH);
           exportExcel(t.headers, t.rows, "scarce-sell-or-hold.xlsx");
         });
         $("exportPdfBtnSOH").addEventListener("click", function(){
-          var t = getTableDataSOH(d);
+          var t = getTableDataSOH(d, currentGranSOH);
           exportPDF(t.headers, t.rows, "Scarce Sell or Hold Comparison");
         });
       } catch(e){

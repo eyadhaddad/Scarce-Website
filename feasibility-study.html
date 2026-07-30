@@ -52,6 +52,7 @@
   .insightBox b{color:var(--navy)}
 
   .chartWrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .chartWrap canvas{width:100%!important;display:block}
   .legend{display:flex;gap:16px;justify-content:center;margin:-4px 0 14px;font-size:11.5px;color:var(--grey)}
   .legend span{display:flex;align-items:center;gap:6px}
   .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
@@ -799,7 +800,9 @@
         $("holdResults").innerHTML = html;
         lastHoldResult = d;
         var currentGran = "annual";
-        drawCashflowChart($("cfChartRental"), getBucketedData(d, currentGran));
+        requestAnimationFrame(function(){
+          drawCashflowChart($("cfChartRental"), getBucketedData(d, currentGran));
+        });
         renderCashflowTable("cfTableHold", d, currentGran);
 
         $("holdResults").querySelectorAll(".granBtnFs").forEach(function(btn){
@@ -897,7 +900,9 @@
         $("flipResults").innerHTML = html;
         lastFlipResult = d;
         var currentGranFlip = "annual";
-        drawCashflowChart($("cfChartFlip"), getBucketedDataFlip(d, currentGranFlip));
+        requestAnimationFrame(function(){
+          drawCashflowChart($("cfChartFlip"), getBucketedDataFlip(d, currentGranFlip));
+        });
         renderCashflowTableFlip("cfTableFlip", d, currentGranFlip);
 
         $("flipResults").querySelectorAll(".granBtnFs").forEach(function(btn){
@@ -970,7 +975,9 @@
 
         lastSTRResult = d;
         var currentGranSTR = "annual";
-        drawCashflowChart($("cfChartSTR"), getBucketedDataSTR(d, currentGranSTR));
+        requestAnimationFrame(function(){
+          drawCashflowChart($("cfChartSTR"), getBucketedDataSTR(d, currentGranSTR));
+        });
         renderCashflowTableSTR("cfTableSTR", d, currentGranSTR);
 
         $("strResults").querySelectorAll(".granBtnFs").forEach(function(btn){
@@ -1051,7 +1058,9 @@
         $("brrrrResults").innerHTML = html;
         lastBRRRRResult = d;
         var currentGranBRRRR = "monthly";
-        drawCashflowChart($("cfChartBRRRR"), getBucketedDataBRRRR(d, currentGranBRRRR));
+        requestAnimationFrame(function(){
+          drawCashflowChart($("cfChartBRRRR"), getBucketedDataBRRRR(d, currentGranBRRRR));
+        });
         renderCashflowTableBRRRR("cfTableBRRRR", d, currentGranBRRRR);
 
         $("brrrrResults").querySelectorAll(".granBtnFs").forEach(function(btn){
@@ -1117,7 +1126,9 @@
 
         $("sohResults").innerHTML = html;
         var currentGranSOH = "annual";
-        drawComparisonChart($("cfChartSOH"), getBucketedDataSOH(d, currentGranSOH));
+        requestAnimationFrame(function(){
+          drawComparisonChart($("cfChartSOH"), getBucketedDataSOH(d, currentGranSOH));
+        });
         renderCashflowTableSOH("cfTableSOH", d, currentGranSOH);
 
         $("sohResults").querySelectorAll(".granBtnFs").forEach(function(btn){

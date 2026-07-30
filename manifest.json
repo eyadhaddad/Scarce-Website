@@ -1,0 +1,14 @@
+{
+  "name": "Scarce — Real Estate Analysis",
+  "short_name": "Scarce",
+  "description": "Independent UAE real estate ratings, feasibility tools, and portfolio tracking — no listings, no ads.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#14181C",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

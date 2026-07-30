@@ -1,6 +1,17 @@
 // SCARCE — shared JS helpers across every page.
 // Link this after shared.css and before page-specific scripts.
 
+// Registers the service worker (makes the site installable as a PWA
+// and lets already-visited pages load offline). Runs once, here,
+// rather than being repeated on every page.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function (err) {
+      console.log("Service worker registration failed:", err);
+    });
+  });
+}
+
 /**
  * Animates a number counting up/down to its target value inside
  * the given element. Call this instead of setting textContent

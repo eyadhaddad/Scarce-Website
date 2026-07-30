@@ -18,6 +18,9 @@
   h2{font-size:19px;font-weight:800;color:var(--navy);margin-bottom:6px}
   .sub{color:var(--grey);font-size:13px;margin-bottom:20px}
   .fld{margin-bottom:14px}
+  .consentRow{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--grey);margin-bottom:16px;line-height:1.5}
+  .consentRow input{margin-top:2px}
+  .consentRow a{color:var(--teal-deep);font-weight:600}
   .fld label{display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:6px}
   .fld input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;
     background:var(--cream);color:var(--navy)}
@@ -61,6 +64,7 @@
         <div class="fld"><label>Name</label><input type="text" id="suName" autocomplete="name"></div>
         <div class="fld"><label>Email</label><input type="email" id="suEmail" autocomplete="email"></div>
         <div class="fld"><label>Password</label><input type="password" id="suPassword" autocomplete="new-password"></div>
+        <div class="consentRow"><input type="checkbox" id="suConsent"> <label for="suConsent">I agree to the <a href="legal.html#terms" target="_blank">Terms of Service</a> and <a href="legal.html#privacy" target="_blank">Privacy Policy</a></label></div>
         <button class="submitBtn" id="suSubmit">Create account</button>
         <div class="msg" id="suMsg"></div>
       </div>
@@ -142,6 +146,7 @@
     if(!name){ showMsg(msg, "Enter your name.", false); return; }
     if(!email || !password){ showMsg(msg, "Enter your email and password.", false); return; }
     if(password.length < 6){ showMsg(msg, "Password must be at least 6 characters.", false); return; }
+    if(!$("suConsent").checked){ showMsg(msg, "Please agree to the Terms of Service and Privacy Policy to continue.", false); return; }
 
     $("suSubmit").disabled = true; $("suSubmit").textContent = "Creating account…";
     var res = await sb.auth.signUp({ email: email, password: password });

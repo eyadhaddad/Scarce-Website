@@ -18,7 +18,9 @@
   .bookCard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px;margin-bottom:20px}
   .bookRow{display:flex;gap:24px;align-items:flex-start}
   @media(max-width:560px){.bookRow{flex-direction:column;align-items:center;text-align:center}}
+  .bookThumbWrap{flex-shrink:0;width:130px;text-align:center}
   .bookThumbBtn{flex-shrink:0;position:relative;width:130px;border:none;background:none;padding:0;cursor:pointer;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px rgba(20,24,28,.18)}
+  .thumbCaption{margin-top:8px;font-size:11.5px;color:var(--grey)}
   .bookThumbBtn img{width:100%;display:block}
   .bookThumbBtn .thumbOverlay{position:absolute;inset:0;background:rgba(20,24,28,.75);color:#fff;font-size:11.5px;font-weight:700;
     display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;opacity:0;transition:opacity .15s}
@@ -87,10 +89,13 @@
 
     <div class="bookCard">
       <div class="bookRow">
-        <button class="bookThumbBtn" id="bookThumbBtn" aria-label="View sample pages">
-          <img src="assets/book-cover.png" alt="The Scarcity Principle — book cover">
-          <span class="thumbOverlay">View sample pages</span>
-        </button>
+        <div class="bookThumbWrap">
+          <button class="bookThumbBtn" id="bookThumbBtn" aria-label="View sample pages">
+            <img src="assets/book-cover.png" alt="The Scarcity Principle — book cover">
+            <span class="thumbOverlay">View sample pages</span>
+          </button>
+          <div class="thumbCaption">View sample pages</div>
+        </div>
         <div class="bookText">
           <h2>The Scarcity Principle</h2>
           <p>The book is about understanding the UAE real estate market — the investment strategies that actually work, and how to choose a good unit. Scarcity runs through almost every part of that thinking, since it's one of the strongest forces behind which properties hold and grow their value, but the book is broader than any one idea: it's a practical guide to the market itself. The Ratings library, the Feasibility Study, and every tool on this site build directly on that same thinking.</p>

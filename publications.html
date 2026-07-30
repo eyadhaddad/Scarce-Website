@@ -35,8 +35,21 @@
   .lightboxClose:hover{color:var(--navy)}
   .samplePages{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   @media(max-width:700px){.samplePages{grid-template-columns:1fr}}
-  .samplePage{aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--mid);border:1px solid var(--line)}
+  .samplePage{aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--mid);border:1px solid var(--line);cursor:zoom-in}
   .samplePage img{width:100%;height:100%;object-fit:contain;display:block}
+  .zoomHint{text-align:center;font-size:12px;color:var(--grey);margin-top:14px;font-style:italic}
+
+  .zoomInner{max-width:min(90vw,800px);padding:20px;text-align:center}
+  .zoomInner img{max-width:100%;max-height:78vh;border-radius:8px;object-fit:contain}
+
+  .viewContentsBtn{margin-top:10px;background:none;border:1.5px solid var(--teal);color:var(--teal-deep);font-weight:700;
+    font-size:12.5px;padding:8px 16px;border-radius:8px;cursor:pointer}
+  .viewContentsBtn:hover{background:var(--teal);color:#fff}
+
+  .tocList{list-style:none}
+  .tocList li{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink)}
+  .tocList li:last-child{border-bottom:none}
+  .tocList li span:last-child{color:var(--grey);font-weight:700;flex-shrink:0}
   .pagePlaceholder{width:100%;height:100%;background:var(--mid);display:flex;align-items:center;justify-content:center;
     text-align:center;color:var(--grey);font-size:13px;font-weight:700;padding:16px;border:1px dashed var(--line);border-radius:10px}
   .pagePlaceholder span{display:block;font-weight:400;font-size:11.5px;color:#9aa0a6;margin-top:6px;font-style:italic}
@@ -81,19 +94,66 @@
         <div class="bookText">
           <h2>The Scarcity Principle</h2>
           <p>The book is about understanding the UAE real estate market — the investment strategies that actually work, and how to choose a good unit. Scarcity runs through almost every part of that thinking, since it's one of the strongest forces behind which properties hold and grow their value, but the book is broader than any one idea: it's a practical guide to the market itself. The Ratings library, the Feasibility Study, and every tool on this site build directly on that same thinking.</p>
+          <button class="viewContentsBtn" id="viewContentsBtn">View Contents</button>
         </div>
       </div>
     </div>
 
     <div class="lightbox" id="sampleLightbox">
       <div class="lightboxInner">
-        <button class="lightboxClose" id="lightboxClose" aria-label="Close">×</button>
+        <button class="lightboxClose" id="lightboxCloseSample" aria-label="Close">×</button>
         <h3>Sample pages</h3>
-        <div class="samplePages">
+        <div class="samplePages" id="samplePagesGrid">
           <div class="samplePage"><img src="assets/sample-page-yas-island.png" alt="Sample page — a note on Yas Island"></div>
           <div class="samplePage"><img src="assets/sample-page-cycles-chart.png" alt="Sample page — community price cycles chart"></div>
           <div class="samplePage"><img src="assets/sample-page-market-catalysts.png" alt="Sample page — market catalysts and event-driven movements"></div>
         </div>
+        <div class="zoomHint">Click any page to enlarge it</div>
+      </div>
+    </div>
+
+    <div class="lightbox" id="zoomLightbox">
+      <div class="lightboxInner zoomInner">
+        <button class="lightboxClose" id="lightboxCloseZoom" aria-label="Close">×</button>
+        <img id="zoomImg" src="" alt="Enlarged sample page">
+      </div>
+    </div>
+
+    <div class="lightbox" id="contentsLightbox">
+      <div class="lightboxInner">
+        <button class="lightboxClose" id="lightboxCloseContents" aria-label="Close">×</button>
+        <h3>Contents</h3>
+        <ul class="tocList">
+          <li><span>Disclaimer</span><span>2</span></li>
+          <li><span>Preface</span><span>3</span></li>
+          <li><span>How to Use This Book</span><span>4</span></li>
+          <li><span>Contents</span><span>5</span></li>
+          <li><span>Introduction</span><span>6</span></li>
+          <li><span>1. Introduction to Real Estate Investment</span><span>8</span></li>
+          <li><span>2. The UAE Real Estate Market</span><span>10</span></li>
+          <li><span>3. Market Cycles and the Myth of Market Timing</span><span>16</span></li>
+          <li><span>4. Market Catalysts and Event-Driven Movements</span><span>20</span></li>
+          <li><span>5. Recognising Late-Cycle Conditions</span><span>23</span></li>
+          <li><span>6. The Life Cycle of a Community</span><span>25</span></li>
+          <li><span>7. The Scarcity Principle</span><span>29</span></li>
+          <li><span>8. Common Investment Strategies in the UAE</span><span>34</span></li>
+          <li><span>9. Ready versus Off-Plan Properties</span><span>36</span></li>
+          <li><span>10. Investment Evaluation and Decision-Making</span><span>38</span></li>
+          <li><span>11. A Mental Framework for Evaluating a Unit</span><span>43</span></li>
+          <li><span>12. Transaction Costs, Fees, and Taxes</span><span>46</span></li>
+          <li><span>13. Service Charges and Owners Associations</span><span>49</span></li>
+          <li><span>14. Mortgages and Leverage</span><span>51</span></li>
+          <li><span>15. Financing Rules: Residents and Non-Residents</span><span>54</span></li>
+          <li><span>16. Real Estate Risk Management</span><span>57</span></li>
+          <li><span>17. Building Your Exit Strategy</span><span>59</span></li>
+          <li><span>18. UAE Communities Explained</span><span>62</span></li>
+          <li><span>19. Practical Examples and Mini Case Studies</span><span>68</span></li>
+          <li><span>20. Final Strategic Principles</span><span>71</span></li>
+          <li><span>21. Investor Checklists and Templates</span><span>72</span></li>
+          <li><span>22. Glossary of Key Terms</span><span>75</span></li>
+          <li><span>23. Sources and Further Reading</span><span>77</span></li>
+          <li><span>Appendix: Market Outlook After the 2026 Iran–US Conflict</span><span>78</span></li>
+        </ul>
       </div>
     </div>
 
@@ -115,14 +175,31 @@
   window.supabaseClient = sb;
   initAuthTopbar(sb);
 
-  document.getElementById("bookThumbBtn").addEventListener("click", function(){
-    document.getElementById("sampleLightbox").classList.add("show");
-  });
-  document.getElementById("lightboxClose").addEventListener("click", function(){
-    document.getElementById("sampleLightbox").classList.remove("show");
-  });
+  function openBox(id){ document.getElementById(id).classList.add("show"); }
+  function closeBox(id){ document.getElementById(id).classList.remove("show"); }
+
+  document.getElementById("bookThumbBtn").addEventListener("click", function(){ openBox("sampleLightbox"); });
+  document.getElementById("lightboxCloseSample").addEventListener("click", function(){ closeBox("sampleLightbox"); });
   document.getElementById("sampleLightbox").addEventListener("click", function(e){
-    if(e.target.id === "sampleLightbox") this.classList.remove("show");
+    if(e.target.id === "sampleLightbox") closeBox("sampleLightbox");
+  });
+
+  document.getElementById("viewContentsBtn").addEventListener("click", function(){ openBox("contentsLightbox"); });
+  document.getElementById("lightboxCloseContents").addEventListener("click", function(){ closeBox("contentsLightbox"); });
+  document.getElementById("contentsLightbox").addEventListener("click", function(e){
+    if(e.target.id === "contentsLightbox") closeBox("contentsLightbox");
+  });
+
+  document.querySelectorAll("#samplePagesGrid .samplePage img").forEach(function(img){
+    img.addEventListener("click", function(){
+      document.getElementById("zoomImg").src = this.src;
+      document.getElementById("zoomImg").alt = this.alt;
+      openBox("zoomLightbox");
+    });
+  });
+  document.getElementById("lightboxCloseZoom").addEventListener("click", function(){ closeBox("zoomLightbox"); });
+  document.getElementById("zoomLightbox").addEventListener("click", function(e){
+    if(e.target.id === "zoomLightbox") closeBox("zoomLightbox");
   });
 </script>
 </body>

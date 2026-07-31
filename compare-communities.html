@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Compare Communities — Scarce</title>
 <link rel="stylesheet" href="shared.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181C">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   .wrap{max-width:1000px;margin:0 auto;padding:4px 16px 40px}
   #cc *{box-sizing:border-box}
@@ -57,10 +62,13 @@
   var $ = function(id){ return document.getElementById(id); };
   var COLORS = ["#0E9B96", "#C9952B", "#7A5FBF"];
 
-  function renderGate(){
+  function renderGate(signedIn){
+    var link = signedIn
+      ? '<a href="https://scarceae.gumroad.com/l/scarceplus" target="_blank" rel="noopener">Get Scarce Plus</a>'
+      : '<a href="auth.html?mode=signup">Sign up, then get Scarce Plus</a>';
     $("cc").innerHTML = '<div class="rGate"><h3>Compare Communities is part of Scarce Plus</h3>'+
       '<p>Upgrade to Scarce Plus to overlay full ratings for up to three communities side by side.</p>'+
-      '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
+      link+'</div>';
   }
 
   async function authedHeaders(){
@@ -71,9 +79,10 @@
 
   async function init(){
     var session = (await sb.auth.getSession()).data.session;
-    if(!session){ renderGate(); return; }
-    var profRes = await sb.from("profiles").select("tier").eq("id", session.user.id).single();
-    if(!profRes.data || profRes.data.tier !== "paid"){ renderGate(); return; }
+    if(!session){ renderGate(false); return; }
+    var profRes = await sb.from("profiles").select("tier, paid_until").eq("id", session.user.id).single();
+    var hasValidExpiry = profRes.data && profRes.data.paid_until && new Date(profRes.data.paid_until) > new Date();
+    if(!profRes.data || (profRes.data.tier !== "paid" && !hasValidExpiry)){ renderGate(true); return; }
     renderTool();
   }
 

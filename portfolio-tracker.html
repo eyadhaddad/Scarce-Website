@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portfolio Tracker — Scarce</title>
 <link rel="stylesheet" href="shared.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181C">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
   <div class="topbar">
@@ -350,8 +355,8 @@
   async function loadProfileAndClients(){
     var user = (await sb.auth.getUser()).data.user;
     if(!user) return;
-    var profRes = await sb.from("profiles").select("tier").eq("id", user.id).single();
-    isPaidTier = profRes.data && profRes.data.tier === "paid";
+    var profRes = await sb.from("profiles").select("tier, paid_until").eq("id", user.id).single();
+    isPaidTier = profRes.data && (profRes.data.tier === "paid" || (profRes.data.paid_until && new Date(profRes.data.paid_until) > new Date()));
 
     // Clients and grouping are available to every user — no role gate.
     var cRes = await sb.from("clients").select("*").eq("user_id", user.id).order("name");

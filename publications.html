@@ -44,7 +44,10 @@
   .zoomInner{max-width:min(90vw,800px);padding:20px;text-align:center}
   .zoomInner img{max-width:100%;max-height:78vh;border-radius:8px;object-fit:contain}
 
-  .viewContentsBtn{margin-top:10px;background:none;border:1.5px solid var(--teal);color:var(--teal-deep);font-weight:700;
+  .bookBtnRow{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .buyBookBtn{background:var(--teal);color:#fff;text-decoration:none;font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:8px}
+  .buyBookBtn:hover{background:var(--teal-deep)}
+  .viewContentsBtn{margin-top:0;background:none;border:1.5px solid var(--teal);color:var(--teal-deep);font-weight:700;
     font-size:12.5px;padding:8px 16px;border-radius:8px;cursor:pointer}
   .viewContentsBtn:hover{background:var(--teal);color:#fff}
 
@@ -99,7 +102,10 @@
         <div class="bookText">
           <h2>The Scarcity Principle</h2>
           <p>The book is about understanding the UAE real estate market — the investment strategies that actually work, and how to choose a good unit. Scarcity runs through almost every part of that thinking, since it's one of the strongest forces behind which properties hold and grow their value, but the book is broader than any one idea: it's a practical guide to the market itself. The Ratings library, the Feasibility Study, and every tool on this site build directly on that same thinking.</p>
-          <button class="viewContentsBtn" id="viewContentsBtn">View Contents</button>
+          <div class="bookBtnRow">
+            <a class="buyBookBtn" href="https://scarceae.gumroad.com/l/The_Scarcity_Principle" target="_blank" rel="noopener">Buy the book — $24</a>
+            <button class="viewContentsBtn" id="viewContentsBtn">View Contents</button>
+          </div>
         </div>
       </div>
     </div>

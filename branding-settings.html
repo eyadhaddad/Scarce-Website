@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Export Branding — Scarce</title>
 <link rel="stylesheet" href="shared.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181C">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   .wrap{max-width:640px;margin:0 auto;padding:4px 16px 40px}
   #bs *{box-sizing:border-box}
@@ -70,19 +75,23 @@
   var currentLogoUrl = null;
   var selectedFile = null;
 
-  function renderGate(){
+  function renderGate(signedIn){
+    var link = signedIn
+      ? '<a href="https://scarceae.gumroad.com/l/scarceplus" target="_blank" rel="noopener">Get Scarce Plus</a>'
+      : '<a href="auth.html?mode=signup">Sign up, then get Scarce Plus</a>';
     $("bs").innerHTML = '<div class="rGate"><h3>Export Branding is part of Scarce Plus</h3>'+
       '<p>Upgrade to Scarce Plus to set a logo and contact info that appears automatically on your Feasibility Study and Contract Generator exports.</p>'+
-      '<a href="auth.html?mode=signup">Get Scarce Plus</a></div>';
+      link+'</div>';
   }
 
   async function init(){
     var session = (await sb.auth.getSession()).data.session;
-    if(!session){ renderGate(); return; }
+    if(!session){ renderGate(false); return; }
     currentUser = session.user;
 
-    var profRes = await sb.from("profiles").select("tier, name, contact_info, logo_url").eq("id", currentUser.id).single();
-    if(!profRes.data || profRes.data.tier !== "paid"){ renderGate(); return; }
+    var profRes = await sb.from("profiles").select("tier, name, contact_info, logo_url, paid_until").eq("id", currentUser.id).single();
+    var hasValidExpiry = profRes.data && profRes.data.paid_until && new Date(profRes.data.paid_until) > new Date();
+    if(!profRes.data || (profRes.data.tier !== "paid" && !hasValidExpiry)){ renderGate(true); return; }
 
     renderForm(profRes.data);
   }
